@@ -1,0 +1,132 @@
+{
+  "captured_at": "2026-10-23T09:49:14.810290+08:00",
+  "purpose": "Single-case native Ollama /api/chat think=false diagnostic; separate from the 48-request primary comparison.",
+  "case_id": "zh_technical",
+  "protocol_note": "Raw response bodies are captured for this diagnostic run. It uses Ollama native /api/chat, while the primary benchmark and app use OpenAI-compatible /v1/chat/completions, so timings are not a strict apples-to-apples comparison.",
+  "timeout_seconds": 75,
+  "results": [
+    {
+      "model": "qwen3-0.6b:latest",
+      "request": {
+        "model": "qwen3-0.6b:latest",
+        "think": false,
+        "stream": false,
+        "options": {
+          "temperature": 0.2
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a professional translator. Translate the user's text into English.\nRules:\n- Output ONLY the translation. No explanations, prefixes, quotes, or notes.\n- Preserve the original meaning, tone, formatting and line breaks.\n- Keep proper nouns, code, URLs and technical terms accurate.\n- If the text is already in English, return it unchanged."
+          },
+          {
+            "role": "user",
+            "content": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。"
+          }
+        ]
+      },
+      "http_status": 200,
+      "elapsed_seconds": 1.085,
+      "raw_response_body": "{\"model\":\"qwen3-0.6b:latest\",\"created_at\":\"2026-10-23T01:49:15.895155Z\",\"message\":{\"role\":\"assistant\",\"content\":\"If a cache miss, the cache should be reverted to the main database within 200 milliseconds; no retry of write operations is allowed.\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":1066412958,\"load_duration\":819678750,\"prompt_eval_count\":116,\"prompt_eval_cached_count\":0,\"prompt_eval_duration\":37864000,\"eval_count\":30,\"eval_duration\":198843000}",
+      "response": {
+        "model": "qwen3-0.6b:latest",
+        "created_at": "2026-10-23T01:49:15.895155Z",
+        "message": {
+          "role": "assistant",
+          "content": "If a cache miss, the cache should be reverted to the main database within 200 milliseconds; no retry of write operations is allowed."
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 1066412958,
+        "load_duration": 819678750,
+        "prompt_eval_count": 116,
+        "prompt_eval_cached_count": 0,
+        "prompt_eval_duration": 37864000,
+        "eval_count": 30,
+        "eval_duration": 198843000
+      }
+    },
+    {
+      "model": "qwen3-1.7b:latest",
+      "request": {
+        "model": "qwen3-1.7b:latest",
+        "think": false,
+        "stream": false,
+        "options": {
+          "temperature": 0.2
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a professional translator. Translate the user's text into English.\nRules:\n- Output ONLY the translation. No explanations, prefixes, quotes, or notes.\n- Preserve the original meaning, tone, formatting and line breaks.\n- Keep proper nouns, code, URLs and technical terms accurate.\n- If the text is already in English, return it unchanged."
+          },
+          {
+            "role": "user",
+            "content": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。"
+          }
+        ]
+      },
+      "http_status": 200,
+      "elapsed_seconds": 0.212,
+      "raw_response_body": "{\"model\":\"qwen3-1.7b:latest\",\"created_at\":\"2026-10-23T01:49:16.107925Z\",\"message\":{\"role\":\"assistant\",\"content\":\"If cache miss, revert to main database within 200 milliseconds; do not retry write operations.\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":210082917,\"load_duration\":913625,\"prompt_eval_count\":116,\"prompt_eval_cached_count\":115,\"prompt_eval_duration\":25270000,\"eval_count\":22,\"eval_duration\":179942000}",
+      "response": {
+        "model": "qwen3-1.7b:latest",
+        "created_at": "2026-10-23T01:49:16.107925Z",
+        "message": {
+          "role": "assistant",
+          "content": "If cache miss, revert to main database within 200 milliseconds; do not retry write operations."
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 210082917,
+        "load_duration": 913625,
+        "prompt_eval_count": 116,
+        "prompt_eval_cached_count": 115,
+        "prompt_eval_duration": 25270000,
+        "eval_count": 22,
+        "eval_duration": 179942000
+      }
+    },
+    {
+      "model": "qwen3-4b:latest",
+      "request": {
+        "model": "qwen3-4b:latest",
+        "think": false,
+        "stream": false,
+        "options": {
+          "temperature": 0.2
+        },
+        "messages": [
+          {
+            "role": "system",
+            "content": "You are a professional translator. Translate the user's text into English.\nRules:\n- Output ONLY the translation. No explanations, prefixes, quotes, or notes.\n- Preserve the original meaning, tone, formatting and line breaks.\n- Keep proper nouns, code, URLs and technical terms accurate.\n- If the text is already in English, return it unchanged."
+          },
+          {
+            "role": "user",
+            "content": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。"
+          }
+        ]
+      },
+      "http_status": 200,
+      "elapsed_seconds": 1.374,
+      "raw_response_body": "{\"model\":\"qwen3-4b:latest\",\"created_at\":\"2026-10-23T01:49:17.482898Z\",\"message\":{\"role\":\"assistant\",\"content\":\"If the cache miss occurs, fall back to the primary database within 200 milliseconds; do not retry write operations.\"},\"done\":true,\"done_reason\":\"stop\",\"total_duration\":1373034250,\"load_duration\":786307917,\"prompt_eval_count\":112,\"prompt_eval_cached_count\":0,\"prompt_eval_duration\":163536000,\"eval_count\":26,\"eval_duration\":419440000}",
+      "response": {
+        "model": "qwen3-4b:latest",
+        "created_at": "2026-10-23T01:49:17.482898Z",
+        "message": {
+          "role": "assistant",
+          "content": "If the cache miss occurs, fall back to the primary database within 200 milliseconds; do not retry write operations."
+        },
+        "done": true,
+        "done_reason": "stop",
+        "total_duration": 1373034250,
+        "load_duration": 786307917,
+        "prompt_eval_count": 112,
+        "prompt_eval_cached_count": 0,
+        "prompt_eval_duration": 163536000,
+        "eval_count": 26,
+        "eval_duration": 419440000
+      }
+    }
+  ]
+}

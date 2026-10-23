@@ -1,0 +1,114 @@
+<p align="center"><img src="Resources/AppIcon-preview.png" width="112" alt="MoTranslate のアイコン"></p>
+
+# 墨译 MoTranslate — macOS 用 AI 翻訳アプリ
+
+[简体中文](README.zh-CN.md) · [English](README.md) · **日本語**
+
+MoTranslate は、SwiftUI と AppKit で作られた Mac のメニューバー翻訳ツールです。入力・貼り付け・選択したテキストを、Ollama のローカルモデルや Chat Completions 互換 API で翻訳できます。ショートカットでパネルを開き、原文と訳文を比較し、結果をコピーできます。
+
+**macOS 14 以降 · Apple Silicon 向けバイナリ · MIT ライセンス**
+
+<img src="docs/screenshots/01-translation.png" width="900" alt="実際のアプリで中国語を英語に翻訳した画面">
+
+*実際に動作しているアプリのスクリーンショットです。例文は合成テキストです。現在の UI は簡体字中国語で、日本語・英語版はドキュメントのみです。*
+
+## 主な機能
+
+- Ollama によるローカル推論。モデルをダウンロードした後は、クラウドの翻訳サービスを使わずに翻訳できます。
+- 他のアプリで文字を選択して **⌥D** を押すと翻訳ポップアップを表示します。編集可能なアプリでは訳文への置換も試みます。アクセシビリティ権限が必要です。
+- **⌥A** でパネル表示、**⌘Return** で翻訳、**⌘⇧C** で訳文コピー、**⌘K** でクリア。
+- サイズ変更・ピン留め・複数ディスプレイに対応したネイティブパネル。macOS 26 以降では Liquid Glass コントロールを使用します。
+- Base URL とモデル名を変更でき、API キーは macOS キーチェーンに保存します。
+- 自動翻訳には 700ms のデバウンスがあり、入力変更後に古い結果が新しい内容を上書きしないようにします。
+
+## インストール
+
+### ビルド済みアプリ
+
+[Releases](https://github.com/MoYu2008Fish/motranslate-macos/releases) から `MoTranslate-macos-arm64.zip` を取得し、展開した `MoTranslate.app` を「アプリケーション」に移動して開いてください。モデルや API キーは含まれていません。
+
+Apple Silicon 向けです。Intel バイナリは提供していません。アプリは ad-hoc 署名されており、公証はされていません。macOS が確認を求める場合は、通常のセキュリティ手順に従ってください。現在の実機確認は macOS 26 で行っており、macOS 14/15 と 27 での動作は未確認です。
+
+### ソースからビルド・配置
+
+Xcode 26 以降、または macOS 26 以降の SDK を含む対応 Command Line Tools が必要です。
+
+```sh
+git clone https://github.com/MoYu2008Fish/motranslate-macos.git
+cd motranslate-macos
+./deploy.sh
+```
+
+Finder で `Deploy MoTranslate.command` または `一键部署墨译.command` をダブルクリックしても実行できます。通常のデスクトップユーザーで実行し、sudo は使用しないでください。
+
+スクリプトは、旧版をバックアップし、`/Applications/MoTranslate.app` を更新し、デスクトップに Finder エイリアスを作成し、Dock に一つの項目を固定して起動します。Dock の他のアプリと順序は維持され、アイコン更新のため Dock が一時的に再起動します。繰り返し実行しても同じ項目は追加されません。同名の無関係なデスクトップファイルは上書きしません。
+
+`/Applications` に書き込めず、既存のアプリもない場合は `~/Applications` を使用します。バックアップは `~/Library/Application Support/MoTranslate/DeploymentBackups/` に保存されます。
+
+```sh
+./build.sh release
+./deploy.sh --no-build
+./deploy.sh --no-build --no-launch
+```
+
+## ローカルモデルの設定
+
+<img src="docs/screenshots/03-local-model-settings.png" width="620" alt="Ollama のローカル URL とモデル名の設定画面">
+
+1. Ollama を起動し、`ollama list` でインストール済みモデルの正確な名前を確認します。
+2. **⌘, → 翻译服务** を開き、Base URL に `http://localhost:11434/v1` を入力します。
+3. ローカル Ollama では API Key を空欄にし、モデル名を指定します。
+4. **测试连接**（接続テスト）を押します。
+
+スクリーンショットの `qwen3-4b` は開発機のローカル別名です。自分の環境のタグを使用してください。プリセットは編集可能な例であり、モデルのダウンロードは行いません。[ローカルモデル比較](benchmarks/README.md) には入力、出力、所要時間、比較の制限を掲載しています。
+
+クラウドサービスの場合は、互換 Base URL、モデル ID、API キーを指定します。`/v1` の後ろには `/chat/completions` が補われます。Responses 専用など互換性のない API には対応していません。
+
+### ローカル比較の結果
+
+開発機（M1 Max、64 GB）で各モデルに同じ 12 件の合成例文を使ったところ、日常利用には **Qwen3-4B-Instruct-2507 Q4_K_M**（ローカル別名 `qwen3-4b:latest`）が最もバランスよく、平均応答時間は **0.62 秒**でした。Gemma4 26B は一部で自然な訳文を出しましたが、平均 **18.69 秒**でした。1.7B は小さいモデルの候補、0.6B は意味の欠落がありました。品質は Luna medium による主観評価です。モデルの変種と実行バックエンドも異なるため、一般的な性能順位とは見なせません。[全出力と制限](benchmarks/REPORT.md)をご確認ください。
+
+## 操作
+
+1. **⌥A** でパネルを表示し、原文を入力・貼り付けます。
+2. 自動翻訳を待つか、**⌘Return** または「翻译」を押します。
+3. 「智能互译」は中国語 → 英語、それ以外の検出言語 → 中国語です。翻訳先を中国語または英語に固定することもできます。
+4. 「复制译文」または **⌘⇧C** で結果をコピーします。
+
+**現在の翻訳先は中国語と英語のみです。** 日本語を含む任意の翻訳先を選ぶ UI はありません。短文や混在した文字の言語判定には曖昧さがあります。
+
+| 操作 | ショートカット |
+| --- | --- |
+| パネルを表示・非表示 | ⌥A |
+| 選択範囲の翻訳 | 既定は ⌥D、設定で変更可能 |
+| 翻訳 | ⌘Return |
+| 訳文をコピー | ⌘⇧C |
+| クリア | ⌘K |
+| 設定 | ⌘, |
+| パネルを閉じる | Esc / ⌘W |
+
+<img src="docs/screenshots/02-compact-layout.png" width="540" alt="幅を狭くして上下に配置された翻訳パネル">
+
+ウィンドウの端をドラッグしてサイズを変更できます。幅が狭いときは上下、広いときは左右に表示されます。
+
+## 権限・プライバシー
+
+選択範囲の読み取りと置換には「システム設定 → プライバシーとセキュリティ → アクセシビリティ」で権限を付与してください。通常の入力・貼り付け翻訳には不要です。アプリによっては読み取りや編集に対応しておらず、コピー・貼り付けの代替処理も完全ではありません。再ビルド後に権限の再設定が必要になる場合があります。
+
+テキストは設定したエンドポイントへ送信されます。ローカル Ollama とダウンロード済みモデルなら推論は Mac 上で行えますが、クラウド接続時はテキストが外部に送信されます。詳しくは [SECURITY.md](SECURITY.md) を参照してください。
+
+初回のモデル読み込みは遅くなることがあります。ローカル接続は最大 180 秒、その他の接続は 60 秒待機します。処理は停止・再試行できます。ショートカットが反応しない場合は、別の場所の MoTranslate が起動していないか確認してください。
+
+## 開発
+
+```sh
+swift test
+swift tools/deploy.swift --self-test
+./build.sh release
+```
+
+自測は一時ファイルとメモリ内の Dock データを使用し、実際の Dock やインストール先は変更しません。追加の Swift パッケージ依存関係はありません。
+
+[操作ガイド](docs/usage.md) · [モデル比較](benchmarks/README.md) · [貢献方法](CONTRIBUTING.md) · [MIT ライセンス](LICENSE)
+
+検索キーワード：Mac 翻訳アプリ、macOS 翻訳、メニューバー翻訳、選択範囲翻訳、ローカル AI、Ollama、オフライン翻訳、中国語英語翻訳、SwiftUI、AppKit。

@@ -1,0 +1,14 @@
+.build/
+build/
+.DS_Store
+.swiftpm/
+# Local credentials, archives, logs, and deployment backups
+.env
+.env.*
+!.env.example
+*.log
+*.zip
+*.dmg
+*.dSYM/
+__pycache__/
+Resources/AppIcon-legacy.icns

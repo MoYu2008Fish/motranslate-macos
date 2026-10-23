@@ -1,0 +1,233 @@
+{
+  "captured_at": "2026-10-23T09:50:34.381611+08:00",
+  "source": "Ollama localhost /api/tags and /api/show (read-only)",
+  "models": [
+    {
+      "name": "qwen3-4b:latest",
+      "model": "qwen3-4b:latest",
+      "digest": "29a049188e0541fddbc8c9f93ab880e3e6a98ac2d851f3c9f37ea119328a39e7",
+      "modified_at": "2026-10-23T09:31:08.65171205+08:00",
+      "size_bytes": 2497281270,
+      "tag_details": {
+        "parent_model": "qwen3-4b-q4.gguf",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "4.0B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 262144,
+        "embedding_length": 2560,
+        "runner": "llamacpp"
+      },
+      "capabilities": [
+        "tools",
+        "thinking",
+        "completion"
+      ],
+      "api_show": {
+        "details": {
+          "parent_model": "qwen3-4b-q4.gguf",
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "4.0B",
+          "quantization_level": "Q4_K_M",
+          "runner": "llamacpp"
+        },
+        "parameters": "num_ctx                        4096\ntemperature                    0.2",
+        "thinking": null,
+        "model_info": {
+          "general.architecture": "qwen3",
+          "general.base_model.0.name": "Qwen3 4B Instruct 2507",
+          "general.base_model.0.organization": "Qwen",
+          "general.base_model.0.version": "2507",
+          "general.basename": "Qwen3-4B-Instruct-2507",
+          "general.file_type": 15,
+          "general.finetune": "Instruct",
+          "general.parameter_count": 4022468096,
+          "general.quantized_by": "Unsloth",
+          "general.version": "2507",
+          "qwen3.block_count": 36,
+          "qwen3.context_length": 262144,
+          "qwen3.embedding_length": 2560
+        },
+        "template_evidence": {
+          "reported": true,
+          "contains_enable_thinking_false_branch": false,
+          "note": "Only boolean/template evidence is retained, not the full model template."
+        }
+      }
+    },
+    {
+      "name": "qwen3-1.7b:latest",
+      "model": "qwen3-1.7b:latest",
+      "digest": "cb4209ef492e859e6e43f2e215f03c44d09f6e51f6ba6dfff3daeebeb3dfd518",
+      "modified_at": "2026-10-23T09:31:05.137705711+08:00",
+      "size_bytes": 1107409622,
+      "tag_details": {
+        "parent_model": "qwen3-1.7b-q4.gguf",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "1.7B",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 2048,
+        "runner": "llamacpp"
+      },
+      "capabilities": [
+        "tools",
+        "thinking",
+        "completion"
+      ],
+      "api_show": {
+        "details": {
+          "parent_model": "qwen3-1.7b-q4.gguf",
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "1.7B",
+          "quantization_level": "Q4_K_M",
+          "runner": "llamacpp"
+        },
+        "parameters": "num_ctx                        4096\ntemperature                    0.2",
+        "thinking": null,
+        "model_info": {
+          "general.architecture": "qwen3",
+          "general.basename": "Qwen3-1.7B",
+          "general.file_type": 15,
+          "general.parameter_count": 1720574976,
+          "general.quantized_by": "Unsloth",
+          "qwen3.block_count": 28,
+          "qwen3.context_length": 40960,
+          "qwen3.embedding_length": 2048
+        },
+        "template_evidence": {
+          "reported": true,
+          "contains_enable_thinking_false_branch": true,
+          "note": "Only boolean/template evidence is retained, not the full model template."
+        }
+      }
+    },
+    {
+      "name": "qwen3-0.6b:latest",
+      "model": "qwen3-0.6b:latest",
+      "digest": "5b345c8b2d17b4b6f4e103000b391bdbf211f4fc8dbcd90f847dccf5001843d3",
+      "modified_at": "2026-10-23T09:31:03.332387136+08:00",
+      "size_bytes": 396705625,
+      "tag_details": {
+        "parent_model": "qwen3-0.6b-q4.gguf",
+        "format": "gguf",
+        "family": "qwen3",
+        "families": [
+          "qwen3"
+        ],
+        "parameter_size": "596.05M",
+        "quantization_level": "Q4_K_M",
+        "context_length": 40960,
+        "embedding_length": 1024,
+        "runner": "llamacpp"
+      },
+      "capabilities": [
+        "tools",
+        "thinking",
+        "completion"
+      ],
+      "api_show": {
+        "details": {
+          "parent_model": "qwen3-0.6b-q4.gguf",
+          "format": "gguf",
+          "family": "qwen3",
+          "families": [
+            "qwen3"
+          ],
+          "parameter_size": "596.05M",
+          "quantization_level": "Q4_K_M",
+          "runner": "llamacpp"
+        },
+        "parameters": "num_ctx                        4096\ntemperature                    0.2",
+        "thinking": null,
+        "model_info": {
+          "general.architecture": "qwen3",
+          "general.basename": "Qwen3-0.6B",
+          "general.file_type": 15,
+          "general.parameter_count": 596049920,
+          "general.quantized_by": "Unsloth",
+          "qwen3.block_count": 28,
+          "qwen3.context_length": 40960,
+          "qwen3.embedding_length": 1024
+        },
+        "template_evidence": {
+          "reported": true,
+          "contains_enable_thinking_false_branch": true,
+          "note": "Only boolean/template evidence is retained, not the full model template."
+        }
+      }
+    },
+    {
+      "name": "gemma4:26b",
+      "model": "gemma4:26b",
+      "digest": "48eb98ec778c163d87f69d735fcdd79e345063af9af4685613fd018ae5debf5e",
+      "modified_at": "2026-10-22T10:17:00.869266802+08:00",
+      "size_bytes": 16146867483,
+      "tag_details": {
+        "parent_model": "",
+        "format": "safetensors",
+        "family": "",
+        "families": null,
+        "parameter_size": "",
+        "quantization_level": "",
+        "runner": "mlx"
+      },
+      "capabilities": [
+        "completion",
+        "vision",
+        "tools",
+        "thinking"
+      ],
+      "api_show": {
+        "details": {
+          "parent_model": "",
+          "format": "safetensors",
+          "family": "gemma4",
+          "families": null,
+          "parameter_size": "26.2B",
+          "quantization_level": "nvfp4",
+          "runner": "mlx"
+        },
+        "parameters": "temperature                    1\ntop_k                          64\ntop_p                          0.95",
+        "thinking": {
+          "values": [
+            false,
+            true
+          ],
+          "default": true
+        },
+        "model_info": {
+          "gemma4.block_count": 30,
+          "gemma4.context_length": 262144,
+          "gemma4.embedding_length": 2816,
+          "general.architecture": "gemma4",
+          "general.parameter_count": 26225562962
+        },
+        "template_evidence": {
+          "reported": true,
+          "contains_enable_thinking_false_branch": false,
+          "note": "Only boolean/template evidence is retained, not the full model template."
+        }
+      }
+    }
+  ],
+  "interpretation": {
+    "qwen3_4b": "Ollama /api/tags advertises thinking capability. /api/show identifies the base as Qwen3-4B-Instruct-2507; stored parameters are num_ctx=4096 and temperature=0.2, with no explicit think/enable_thinking setting. /api/show returned no thinking default. Its reported template does not contain the enable_thinking=false conditional found in the 0.6B and 1.7B templates. These facts do not prove that thinking is enabled or disabled by default; they show a different model variant and template. The primary benchmark did not set think=false.",
+    "cross_model_note": "The app sent the same Chat Completions prompt and generation parameters to every model, but local artifacts differ in model variant, stored parameters, template, quantization format, and runner (llama.cpp versus MLX). The latency result is a comparison of installed configurations and cannot isolate parameter-count effects."
+  }
+}

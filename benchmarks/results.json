@@ -1,0 +1,496 @@
+{
+  "created_at": "2026-10-23T09:41:21.408627+08:00",
+  "base": "http://localhost:11434",
+  "timeout_seconds": 75,
+  "prompt": "Mo Translate Translator.swift system prompt; temperature=0.2; stream=false",
+  "models": {
+    "qwen3-0.6b:latest": [
+      {
+        "id": "zh_casual",
+        "category": "口语",
+        "source": "我本来只想看一眼，结果一不小心刷了两个小时。",
+        "target": "English",
+        "reference": "I only meant to take a quick look, but somehow ended up scrolling for two hours.",
+        "output": "I wanted to look at it once, but I accidentally watched it for two hours.",
+        "seconds": 2.64,
+        "error": null
+      },
+      {
+        "id": "en_casual",
+        "category": "口语",
+        "source": "That meeting could've been an email, honestly.",
+        "target": "中文",
+        "reference": "说真的，那场会完全可以用邮件解决。",
+        "output": "那次会议可能是一封邮件，说实话。",
+        "seconds": 1.72,
+        "error": null
+      },
+      {
+        "id": "zh_technical",
+        "category": "技术",
+        "source": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。",
+        "target": "English",
+        "reference": "If the cache misses, fall back to the primary database within 200 ms; do not retry write operations.",
+        "output": "If cache miss, retry in 200 ms. Do not retry write operations.",
+        "seconds": 1.75,
+        "error": null
+      },
+      {
+        "id": "en_technical",
+        "category": "技术",
+        "source": "The client retries idempotent requests with exponential backoff, but never retries a payment capture.",
+        "target": "中文",
+        "reference": "客户端会用指数退避重试幂等请求，但绝不会重试支付扣款操作。",
+        "output": "客户端使用指数退避策略重试不可变请求，但未重试支付确认。",
+        "seconds": 2.06,
+        "error": null
+      },
+      {
+        "id": "zh_ambiguous",
+        "category": "歧义",
+        "source": "她告诉朋友自己准备好了。",
+        "target": "English",
+        "reference": "She told her friend that she was ready.",
+        "output": "She told her friend that she was ready.",
+        "seconds": 0.76,
+        "error": null
+      },
+      {
+        "id": "en_ambiguous",
+        "category": "歧义",
+        "source": "I saw her duck.",
+        "target": "中文",
+        "reference": "我看见她的鸭子了。 / 我看见她低头躲闪。 (ambiguity should be preserved where possible)",
+        "output": "我看到她的鸭子",
+        "seconds": 0.82,
+        "error": null
+      },
+      {
+        "id": "zh_format",
+        "category": "格式保留",
+        "source": "请检查：\n- 服务：墨译本地版\n- 地址：https://example.test/v1\n- 环境变量：MO_TRANSLATE_URL",
+        "target": "English",
+        "reference": "Please check:\n- Service: Mo Translate local edition\n- URL: https://example.test/v1\n- Environment variable: MO_TRANSLATE_URL",
+        "output": "Service: Local Version of Mo Translate  \nAddress: https://example.test/v1  \nEnvironment Variables: MO_TRANSLATE_URL",
+        "seconds": 1.27,
+        "error": null
+      },
+      {
+        "id": "en_format",
+        "category": "格式保留",
+        "source": "Status: READY\n1. Open `Settings`\n2. Keep `user_id` unchanged",
+        "target": "中文",
+        "reference": "状态：READY\n1. 打开 `Settings`\n2. 保持 `user_id` 不变",
+        "output": "状态：已准备  \n1. 打开设置  \n2. 保持用户ID不变",
+        "seconds": 1.43,
+        "error": null
+      },
+      {
+        "id": "zh_short",
+        "category": "短句",
+        "source": "别急，慢慢来。",
+        "target": "English",
+        "reference": "No rush. Take your time.",
+        "output": "Don't rush, take it slowly.",
+        "seconds": 1.29,
+        "error": null
+      },
+      {
+        "id": "en_short",
+        "category": "短句",
+        "source": "Works for me.",
+        "target": "中文",
+        "reference": "我没问题。 / 我可以。",
+        "output": "适用于我",
+        "seconds": 0.92,
+        "error": null
+      },
+      {
+        "id": "zh_natural",
+        "category": "自然表达",
+        "source": "这次先别急着下结论，等数据跑完再说。",
+        "target": "English",
+        "reference": "Let's not jump to conclusions yet; we'll talk after the data has finished running.",
+        "output": "Don't rush to a conclusion until the data is processed.",
+        "seconds": 1.72,
+        "error": null
+      },
+      {
+        "id": "en_natural",
+        "category": "自然表达",
+        "source": "We can ship the small fix today and revisit the larger change next week.",
+        "target": "中文",
+        "reference": "我们今天可以先发布这个小修复，下周再重新评估那个较大的改动。",
+        "output": "我们可以在今天部署小问题，并在下周重申更大的改动。",
+        "seconds": 1.93,
+        "error": null
+      }
+    ],
+    "qwen3-1.7b:latest": [
+      {
+        "id": "zh_casual",
+        "category": "口语",
+        "source": "我本来只想看一眼，结果一不小心刷了两个小时。",
+        "target": "English",
+        "reference": "I only meant to take a quick look, but somehow ended up scrolling for two hours.",
+        "output": "I only wanted to look at him once, but ended up accidentally spending two hours watching.",
+        "seconds": 5.08,
+        "error": null
+      },
+      {
+        "id": "en_casual",
+        "category": "口语",
+        "source": "That meeting could've been an email, honestly.",
+        "target": "中文",
+        "reference": "说真的，那场会完全可以用邮件解决。",
+        "output": "那次会议本可以是电子邮件，说实话。",
+        "seconds": 0.26,
+        "error": null
+      },
+      {
+        "id": "zh_technical",
+        "category": "技术",
+        "source": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。",
+        "target": "English",
+        "reference": "If the cache misses, fall back to the primary database within 200 ms; do not retry write operations.",
+        "output": "If a cache miss occurs, revert to the main database within 200 milliseconds; do not retry write operations.",
+        "seconds": 5.73,
+        "error": null
+      },
+      {
+        "id": "en_technical",
+        "category": "技术",
+        "source": "The client retries idempotent requests with exponential backoff, but never retries a payment capture.",
+        "target": "中文",
+        "reference": "客户端会用指数退避重试幂等请求，但绝不会重试支付扣款操作。",
+        "output": "客户重试 idempotent 请求时使用指数退避，但从未重试支付捕获。",
+        "seconds": 0.43,
+        "error": null
+      },
+      {
+        "id": "zh_ambiguous",
+        "category": "歧义",
+        "source": "她告诉朋友自己准备好了。",
+        "target": "English",
+        "reference": "She told her friend that she was ready.",
+        "output": "She told her friends that she was ready.",
+        "seconds": 4.41,
+        "error": null
+      },
+      {
+        "id": "en_ambiguous",
+        "category": "歧义",
+        "source": "I saw her duck.",
+        "target": "中文",
+        "reference": "我看见她的鸭子了。 / 我看见她低头躲闪。 (ambiguity should be preserved where possible)",
+        "output": "我看到她蹲下。",
+        "seconds": 0.36,
+        "error": null
+      },
+      {
+        "id": "zh_format",
+        "category": "格式保留",
+        "source": "请检查：\n- 服务：墨译本地版\n- 地址：https://example.test/v1\n- 环境变量：MO_TRANSLATE_URL",
+        "target": "English",
+        "reference": "Please check:\n- Service: Mo Translate local edition\n- URL: https://example.test/v1\n- Environment variable: MO_TRANSLATE_URL",
+        "output": "Service: MoYi Local Edition  \nAddress: https://example.test/v1  \nEnvironment Variables: MO_TRANSLATE_URL",
+        "seconds": 3.84,
+        "error": null
+      },
+      {
+        "id": "en_format",
+        "category": "格式保留",
+        "source": "Status: READY\n1. Open `Settings`\n2. Keep `user_id` unchanged",
+        "target": "中文",
+        "reference": "状态：READY\n1. 打开 `Settings`\n2. 保持 `user_id` 不变",
+        "output": "状态: 准备就绪\n1. 打开 `Settings`\n2. 保持 `user_id` 不变",
+        "seconds": 0.46,
+        "error": null
+      },
+      {
+        "id": "zh_short",
+        "category": "短句",
+        "source": "别急，慢慢来。",
+        "target": "English",
+        "reference": "No rush. Take your time.",
+        "output": "Don't rush, take it easy.",
+        "seconds": 4.61,
+        "error": null
+      },
+      {
+        "id": "en_short",
+        "category": "短句",
+        "source": "Works for me.",
+        "target": "中文",
+        "reference": "我没问题。 / 我可以。",
+        "output": "Works for me.",
+        "seconds": 0.13,
+        "error": null
+      },
+      {
+        "id": "zh_natural",
+        "category": "自然表达",
+        "source": "这次先别急着下结论，等数据跑完再说。",
+        "target": "English",
+        "reference": "Let's not jump to conclusions yet; we'll talk after the data has finished running.",
+        "output": "Don't rush to draw conclusions now; wait until the data is processed, then say.",
+        "seconds": 4.23,
+        "error": null
+      },
+      {
+        "id": "en_natural",
+        "category": "自然表达",
+        "source": "We can ship the small fix today and revisit the larger change next week.",
+        "target": "中文",
+        "reference": "我们今天可以先发布这个小修复，下周再重新评估那个较大的改动。",
+        "output": "我们今天可以发货小修复程序，下周再回顾较大的更改。",
+        "seconds": 0.26,
+        "error": null
+      }
+    ],
+    "qwen3-4b:latest": [
+      {
+        "id": "zh_casual",
+        "category": "口语",
+        "source": "我本来只想看一眼，结果一不小心刷了两个小时。",
+        "target": "English",
+        "reference": "I only meant to take a quick look, but somehow ended up scrolling for two hours.",
+        "output": "I originally just wanted to take a quick look, but ended up scrolling for two hours.",
+        "seconds": 1.61,
+        "error": null
+      },
+      {
+        "id": "en_casual",
+        "category": "口语",
+        "source": "That meeting could've been an email, honestly.",
+        "target": "中文",
+        "reference": "说真的，那场会完全可以用邮件解决。",
+        "output": "那次会议其实完全可以发一封邮件就行了。",
+        "seconds": 0.29,
+        "error": null
+      },
+      {
+        "id": "zh_technical",
+        "category": "技术",
+        "source": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。",
+        "target": "English",
+        "reference": "If the cache misses, fall back to the primary database within 200 ms; do not retry write operations.",
+        "output": "If the cache miss occurs, fall back to the primary database within 200 milliseconds; do not retry write operations.",
+        "seconds": 0.65,
+        "error": null
+      },
+      {
+        "id": "en_technical",
+        "category": "技术",
+        "source": "The client retries idempotent requests with exponential backoff, but never retries a payment capture.",
+        "target": "中文",
+        "reference": "客户端会用指数退避重试幂等请求，但绝不会重试支付扣款操作。",
+        "output": "客户端会使用指数退避策略重试幂等请求，但永远不会重试支付捕获操作。",
+        "seconds": 0.78,
+        "error": null
+      },
+      {
+        "id": "zh_ambiguous",
+        "category": "歧义",
+        "source": "她告诉朋友自己准备好了。",
+        "target": "English",
+        "reference": "She told her friend that she was ready.",
+        "output": "She told her friend that she was ready.",
+        "seconds": 0.48,
+        "error": null
+      },
+      {
+        "id": "en_ambiguous",
+        "category": "歧义",
+        "source": "I saw her duck.",
+        "target": "中文",
+        "reference": "我看见她的鸭子了。 / 我看见她低头躲闪。 (ambiguity should be preserved where possible)",
+        "output": "我看到她躲闪了。",
+        "seconds": 0.23,
+        "error": null
+      },
+      {
+        "id": "zh_format",
+        "category": "格式保留",
+        "source": "请检查：\n- 服务：墨译本地版\n- 地址：https://example.test/v1\n- 环境变量：MO_TRANSLATE_URL",
+        "target": "English",
+        "reference": "Please check:\n- Service: Mo Translate local edition\n- URL: https://example.test/v1\n- Environment variable: MO_TRANSLATE_URL",
+        "output": "Please check:\n- Service: MoTranslate Local Edition\n- Address: https://example.test/v1\n- Environment variable: MO_TRANSLATE_URL",
+        "seconds": 1.03,
+        "error": null
+      },
+      {
+        "id": "en_format",
+        "category": "格式保留",
+        "source": "Status: READY\n1. Open `Settings`\n2. Keep `user_id` unchanged",
+        "target": "中文",
+        "reference": "状态：READY\n1. 打开 `Settings`\n2. 保持 `user_id` 不变",
+        "output": "状态：准备就绪  \n1. 打开「设置」  \n2. 保持 `user_id` 不变",
+        "seconds": 0.82,
+        "error": null
+      },
+      {
+        "id": "zh_short",
+        "category": "短句",
+        "source": "别急，慢慢来。",
+        "target": "English",
+        "reference": "No rush. Take your time.",
+        "output": "Don't rush, take it slow.",
+        "seconds": 0.28,
+        "error": null
+      },
+      {
+        "id": "en_short",
+        "category": "短句",
+        "source": "Works for me.",
+        "target": "中文",
+        "reference": "我没问题。 / 我可以。",
+        "output": "可以正常使用。",
+        "seconds": 0.17,
+        "error": null
+      },
+      {
+        "id": "zh_natural",
+        "category": "自然表达",
+        "source": "这次先别急着下结论，等数据跑完再说。",
+        "target": "English",
+        "reference": "Let's not jump to conclusions yet; we'll talk after the data has finished running.",
+        "output": "Let's not jump to conclusions this time—wait until the data is processed before we decide.",
+        "seconds": 0.64,
+        "error": null
+      },
+      {
+        "id": "en_natural",
+        "category": "自然表达",
+        "source": "We can ship the small fix today and revisit the larger change next week.",
+        "target": "中文",
+        "reference": "我们今天可以先发布这个小修复，下周再重新评估那个较大的改动。",
+        "output": "我们可以今天发货小的修复，下周再讨论较大的变更。",
+        "seconds": 0.45,
+        "error": null
+      }
+    ],
+    "gemma4:26b": [
+      {
+        "id": "zh_casual",
+        "category": "口语",
+        "source": "我本来只想看一眼，结果一不小心刷了两个小时。",
+        "target": "English",
+        "reference": "I only meant to take a quick look, but somehow ended up scrolling for two hours.",
+        "output": "I only meant to take a quick look, but I ended up scrolling for two hours.",
+        "seconds": 14.37,
+        "error": null
+      },
+      {
+        "id": "en_casual",
+        "category": "口语",
+        "source": "That meeting could've been an email, honestly.",
+        "target": "中文",
+        "reference": "说真的，那场会完全可以用邮件解决。",
+        "output": "说实话，那场会议发封邮件就行了。",
+        "seconds": 16.86,
+        "error": null
+      },
+      {
+        "id": "zh_technical",
+        "category": "技术",
+        "source": "如果缓存未命中，请在 200 毫秒内回退到主数据库；不要重试写操作。",
+        "target": "English",
+        "reference": "If the cache misses, fall back to the primary database within 200 ms; do not retry write operations.",
+        "output": "If the cache misses, fallback to the primary database within 200ms; do not retry write operations.",
+        "seconds": 19.85,
+        "error": null
+      },
+      {
+        "id": "en_technical",
+        "category": "技术",
+        "source": "The client retries idempotent requests with exponential backoff, but never retries a payment capture.",
+        "target": "中文",
+        "reference": "客户端会用指数退避重试幂等请求，但绝不会重试支付扣款操作。",
+        "output": "客户端会对幂等请求进行指数退避重试，但绝不会重试支付捕获。",
+        "seconds": 12.47,
+        "error": null
+      },
+      {
+        "id": "zh_ambiguous",
+        "category": "歧义",
+        "source": "她告诉朋友自己准备好了。",
+        "target": "English",
+        "reference": "She told her friend that she was ready.",
+        "output": "She told her friend she was ready.",
+        "seconds": 8.36,
+        "error": null
+      },
+      {
+        "id": "en_ambiguous",
+        "category": "歧义",
+        "source": "I saw her duck.",
+        "target": "中文",
+        "reference": "我看见她的鸭子了。 / 我看见她低头躲闪。 (ambiguity should be preserved where possible)",
+        "output": "我看到了她的鸭子。\n我看到她躲开了。",
+        "seconds": 52.31,
+        "error": null
+      },
+      {
+        "id": "zh_format",
+        "category": "格式保留",
+        "source": "请检查：\n- 服务：墨译本地版\n- 地址：https://example.test/v1\n- 环境变量：MO_TRANSLATE_URL",
+        "target": "English",
+        "reference": "Please check:\n- Service: Mo Translate local edition\n- URL: https://example.test/v1\n- Environment variable: MO_TRANSLATE_URL",
+        "output": "Please check:\n- Service: Moyi Local Edition\n- Address: https://example.test/v1\n- Environment Variable: MO_TRANSLATE_URL",
+        "seconds": 9.53,
+        "error": null
+      },
+      {
+        "id": "en_format",
+        "category": "格式保留",
+        "source": "Status: READY\n1. Open `Settings`\n2. Keep `user_id` unchanged",
+        "target": "中文",
+        "reference": "状态：READY\n1. 打开 `Settings`\n2. 保持 `user_id` 不变",
+        "output": "状态：就绪\n1. 打开 `Settings`\n2. 保持 `user_id` 不变",
+        "seconds": 26.04,
+        "error": null
+      },
+      {
+        "id": "zh_short",
+        "category": "短句",
+        "source": "别急，慢慢来。",
+        "target": "English",
+        "reference": "No rush. Take your time.",
+        "output": "Don't rush, take your time.",
+        "seconds": 5.54,
+        "error": null
+      },
+      {
+        "id": "en_short",
+        "category": "短句",
+        "source": "Works for me.",
+        "target": "中文",
+        "reference": "我没问题。 / 我可以。",
+        "output": "我没问题。",
+        "seconds": 30.76,
+        "error": null
+      },
+      {
+        "id": "zh_natural",
+        "category": "自然表达",
+        "source": "这次先别急着下结论，等数据跑完再说。",
+        "target": "English",
+        "reference": "Let's not jump to conclusions yet; we'll talk after the data has finished running.",
+        "output": "Don't jump to conclusions this time; let's wait until the data finishes running.",
+        "seconds": 9.76,
+        "error": null
+      },
+      {
+        "id": "en_natural",
+        "category": "自然表达",
+        "source": "We can ship the small fix today and revisit the larger change next week.",
+        "target": "中文",
+        "reference": "我们今天可以先发布这个小修复，下周再重新评估那个较大的改动。",
+        "output": "我们可以今天先发布这个小修复，下周再处理那个较大的变更。",
+        "seconds": 18.39,
+        "error": null
+      }
+    ]
+  }
+}

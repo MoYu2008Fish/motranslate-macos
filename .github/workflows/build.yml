@@ -1,0 +1,37 @@
+name: macOS build
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test-and-build:
+    runs-on: macos-26
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          swift --version
+          xcrun --show-sdk-version
+      - name: Unit tests
+        run: swift test
+      - name: Deployment helper tests (no install or Dock changes)
+        run: swift tools/deploy.swift --self-test
+      - name: Check shell scripts
+        run: bash -n build.sh deploy.sh 'Deploy MoTranslate.command' 一键部署墨译.command
+      - name: Build signed local app
+        run: ./build.sh release
+      - name: Package app
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent build/MoTranslate.app build/MoTranslate-macos-arm64.zip
+          cd build
+          shasum -a 256 MoTranslate-macos-arm64.zip > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MoTranslate-macos-arm64
+          path: |
+            build/MoTranslate-macos-arm64.zip
+            build/SHA256SUMS.txt
