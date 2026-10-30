@@ -9,6 +9,23 @@ import Foundation
     #expect(Translator.detectLanguage("这是一段中文 mixed with English") == "zh-Hans")
 }
 
+@Test func mixedLanguageUsesDominantLanguage() {
+    // 大段英文夹少量中文注释，应按英文处理，否则自动模式会翻错方向。
+    let mostlyEnglish = "The quick brown fox jumps over the lazy dog. 备注：仅供参考。"
+    #expect(Translator.detectLanguage(mostlyEnglish) == "en")
+    #expect(Translator.resolveTarget(sourceCode: Translator.detectLanguage(mostlyEnglish), mode: .auto) == "zh-Hans")
+
+    // 大段中文夹少量英文术语，仍按中文处理。
+    let mostlyChinese = "这个接口返回的是 JSON 格式，需要先解析再渲染到页面上。"
+    #expect(Translator.detectLanguage(mostlyChinese) == "zh-Hans")
+    #expect(Translator.resolveTarget(sourceCode: Translator.detectLanguage(mostlyChinese), mode: .auto) == "en")
+}
+
+@Test func detectsJapaneseAndKorean() {
+    #expect(Translator.detectLanguage("これはテストです") == "ja")
+    #expect(Translator.detectLanguage("안녕하세요") == "ko")
+}
+
 @Test func endpointNormalization() {
     #expect(Translator.endpoint(from: " example.com/v1/ ")?.absoluteString == "https://example.com/v1/chat/completions")
     #expect(Translator.endpoint(from: "http://localhost:11434")?.absoluteString == "http://localhost:11434/v1/chat/completions")

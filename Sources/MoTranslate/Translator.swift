@@ -48,17 +48,96 @@ enum Translator {
 
     // MARK: 语言识别
 
-    /// 汉字优先判断，其余交给 NaturalLanguage，避免中英混排被误判。
+    /// 按字符占比判断主体语言：汉字按字计、拉丁字母按词计，取占比高的一方。
+    /// 只检查“有没有汉字”会把大段英文里的少量中文误判成中文，从而翻错方向。
     static func detectLanguage(_ text: String) -> String {
-        if text.range(of: "\\p{Han}", options: .regularExpression) != nil {
-            return "zh-Hans"
+        var han = 0, kana = 0, hangul = 0, cyrillic = 0, latinWords = 0
+        var inLatinWord = false
+
+        for scalar in text.unicodeScalars {
+            if isHan(scalar) {
+                han += 1
+                inLatinWord = false
+            } else if isKana(scalar) {
+                kana += 1
+                inLatinWord = false
+            } else if isHangul(scalar) {
+                hangul += 1
+                inLatinWord = false
+            } else if isCyrillic(scalar) {
+                cyrillic += 1
+                inLatinWord = false
+            } else if isLatinLetter(scalar) {
+                if !inLatinWord {
+                    latinWords += 1
+                    inLatinWord = true
+                }
+            } else {
+                inLatinWord = false
+            }
         }
+
+        // 假名、谚文只出现在日韩文本里，优先识别，避免被汉字带偏。
+        if kana > 0, kana * 3 >= han { return "ja" }
+        if hangul > 0, hangul >= han, hangul >= latinWords { return "ko" }
+
+        if han > 0, han >= latinWords { return "zh-Hans" }
+
+        if latinWords > 0 {
+            // 纯拉丁文本再交给 NaturalLanguage 区分英、法、德等。
+            let recognizer = NLLanguageRecognizer()
+            recognizer.processString(text)
+            if let language = recognizer.dominantLanguage {
+                return language.rawValue
+            }
+            return "en"
+        }
+
+        if cyrillic > 0 { return "ru" }
+
         let recognizer = NLLanguageRecognizer()
         recognizer.processString(text)
-        if let language = recognizer.dominantLanguage {
-            return language.rawValue
+        return recognizer.dominantLanguage?.rawValue ?? "en"
+    }
+
+    private static func isHan(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x3400...0x4DBF, 0x4E00...0x9FFF, 0xF900...0xFAFF, 0x20000...0x2FA1F:
+            return true
+        default:
+            return false
         }
-        return "en"
+    }
+
+    private static func isKana(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x3040...0x309F, 0x30A0...0x30FF, 0x31F0...0x31FF, 0xFF66...0xFF9D:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func isHangul(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x1100...0x11FF, 0x3130...0x318F, 0xAC00...0xD7AF:
+            return true
+        default:
+            return false
+        }
+    }
+
+    private static func isCyrillic(_ scalar: Unicode.Scalar) -> Bool {
+        (0x0400...0x04FF).contains(scalar.value)
+    }
+
+    private static func isLatinLetter(_ scalar: Unicode.Scalar) -> Bool {
+        switch scalar.value {
+        case 0x41...0x5A, 0x61...0x7A, 0xC0...0x24F:
+            return true
+        default:
+            return false
+        }
     }
 
     static func resolveTarget(sourceCode: String, mode: TargetMode) -> String {
@@ -117,7 +196,6 @@ enum Translator {
 
         let sourceCode = detectLanguage(trimmed)
         let targetCode = resolveTarget(sourceCode: sourceCode, mode: config.targetMode)
-        let targetName = displayName(targetCode)
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -134,7 +212,7 @@ enum Translator {
             "temperature": 0.2,
             "stream": false,
             "messages": [
-                ["role": "system", "content": systemPrompt(target: targetName)],
+                ["role": "system", "content": systemPrompt(targetCode: targetCode)],
                 ["role": "user", "content": trimmed]
             ]
         ]
@@ -165,14 +243,31 @@ enum Translator {
         )
     }
 
-    private static func systemPrompt(target: String) -> String {
-        """
-        You are a professional translator. Translate the user's text into \(target).
+    /// 提示词用目标语言书写，并明确混合文本的处理方式，避免模型以“已经是目标语言”为由整段跳过。
+    private static func systemPrompt(targetCode: String) -> String {
+        if targetCode.hasPrefix("zh") {
+            return """
+            你是一名专业翻译。把用户提供的文本翻译成地道的简体中文。
+
+            规则：
+            1. 只输出译文本身，不要解释、不要前言、不要“译文：”之类的前缀、不要引号，也不要附上原文。
+            2. 输入可能是中英混排或包含其他语言：把其中所有非中文的内容都翻译成中文，已经是中文的内容保持原意即可。不要因为部分内容已经是中文就整段跳过不译。
+            3. 完整保留原文的意思、语气、段落结构和换行。
+            4. 代码、变量名、命令、文件路径、URL、邮箱、专有名词和产品名保持原样，不翻译。
+            5. 译文必须全部是中文，不要残留成句的英文；只有代码、专有名词这类内容允许保留原文。
+            6. 只有当输入整段都已经是中文时，才原样返回，不要改写。
+            """
+        }
+        return """
+        You are a professional translator. Translate the user's text into natural English.
+
         Rules:
-        - Output ONLY the translation. No explanations, prefixes, quotes, or notes.
-        - Preserve the original meaning, tone, formatting and line breaks.
-        - Keep proper nouns, code, URLs and technical terms accurate.
-        - If the text is already in \(target), return it unchanged.
+        1. Output only the translation — no explanation, no preamble, no "Translation:" prefix, no quotes, and do not repeat the source text.
+        2. The input may mix languages. Translate every part that is not English into English, and keep the parts already in English as they are. Never skip the whole input just because part of it is already English.
+        3. Preserve the original meaning, tone, paragraph structure and line breaks.
+        4. Keep code, variable names, commands, file paths, URLs, emails, proper nouns and product names unchanged.
+        5. The whole output must be in English. No sentence may be left in another language, except code, proper nouns and the like.
+        6. Only when the input is already entirely English, return it unchanged.
         """
     }
 
