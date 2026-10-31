@@ -16,13 +16,13 @@ Press ⌥A, enter or paste text, then wait for automatic translation or press �
 
 ## 2. 配置模型 / Configure a model
 
-按 ⌘, 打开「翻译服务」。本地 Ollama 地址通常填写 `http://localhost:11434/v1`，密钥留空。模型名称必须与 `ollama list` 的实际输出一致；截图中的 `qwen3-4b` 是本机别名。点击「测试连接」会向配置的接口发送一条合成英文测试句。
+按 ⌘, 打开「翻译服务」。「主接口」下拉只列出你已经添加过的模型。要新增模型，到下面的「自有模型库」：从预设选择服务商与模型（内置 Ollama、DeepSeek、OpenAI、Anthropic、Gemini、Kimi、智谱、通义、硅基流动、OpenRouter，目录核对自 models.dev），Base URL 与模型代号会自动填好，通常只需补 API Key，然后点「保存到模型库」，它会设为主接口并出现在所有下拉里。点击「测试连接」会向主接口发送一条合成英文测试句。API Key 按服务商保存在系统钥匙串，同一服务商的多个模型共用一份。
 
-Press ⌘, and open 翻译服务. For local Ollama, enter `http://localhost:11434/v1`, leave API Key empty, and use an exact installed tag from `ollama list`. The screenshot's `qwen3-4b` is a local alias. 测试连接 sends a synthetic English test sentence to the configured endpoint.
+Press ⌘, and open 翻译服务. The 主接口 picker only lists models you have added. To add one, use 自有模型库: pick a preset (Ollama, DeepSeek, OpenAI, Anthropic, Gemini, Kimi, Zhipu, Qwen, SiliconFlow, OpenRouter; catalog checked against models.dev), and the Base URL and model ID are filled in. Add the provider's API key if needed, press 保存到模型库, and it becomes the main endpoint and appears in every picker. 测试连接 sends a synthetic English test sentence to the main endpoint. API keys are stored per provider in the macOS Keychain, so models from the same provider share one key.
 
-截图下方还有「峰谷调度」：默认关闭。开启后，高峰时段使用上面的主接口，其余时间改用谷时接口；高峰时段和周末规则可编辑，按本机时区判断。中国法定节假日无法自动识别，需要时请临时关闭调度。DeepSeek 官方高峰为工作日 9:00–12:00、14:00–18:00。
+再往下是「峰谷调度」：默认关闭。开启后，高峰时段使用上面的主接口，其余时间改用谷时接口；高峰时段和周末规则可编辑，按本机时区判断。中国法定节假日无法自动识别，需要时请临时关闭调度。DeepSeek 官方高峰为工作日 9:00–12:00、14:00–18:00。
 
-The 峰谷调度 card below the screenshot is off by default. When enabled, peak hours use the main endpoint above and other hours use the off-peak endpoint. Peak windows and weekend handling are editable and evaluated in the local time zone. Chinese statutory holidays are not detected automatically; disable the schedule for those days if needed. DeepSeek's official peak hours are weekdays 9:00–12:00 and 14:00–18:00 Beijing time.
+Further down is 峰谷调度, off by default. When enabled, peak hours use the main endpoint above and other hours use the off-peak endpoint. Peak windows and weekend handling are editable and evaluated in the local time zone. Chinese statutory holidays are not detected automatically; disable the schedule for those days if needed. DeepSeek's official peak hours are weekdays 9:00–12:00 and 14:00–18:00 Beijing time.
 
 ![实际模型配置 / Actual local-model configuration](screenshots/03-local-model-settings.png)
 

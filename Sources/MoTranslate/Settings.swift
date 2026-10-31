@@ -83,27 +83,14 @@ enum ModelTier {
     }
 }
 
-/// 两套接口配置的固定位置，用于主面板手动选择模型。
-enum ModelSlot: String, Identifiable {
-    case primary
-    case offPeak
-
-    var id: String { rawValue }
-}
-
-struct ModelOption: Identifiable {
-    let slot: ModelSlot
-    let model: String
-    let detail: String
-    var id: String { slot.rawValue }
-}
-
 // MARK: - Keychain
 
 enum Keychain {
     private static let service = "com.moyu.motranslate"
-    static let mainAccount = "openai-api-key"
-    static let offPeakAccount = "offpeak-api-key"
+
+    /// 旧版本的两个固定密钥条目，仅用于升级时迁移。
+    static let legacyMainAccount = "openai-api-key"
+    static let legacyOffPeakAccount = "offpeak-api-key"
 
     private static func baseQuery(account: String) -> [String: Any] {
         [
@@ -113,7 +100,7 @@ enum Keychain {
         ]
     }
 
-    static func load(account: String = mainAccount) -> String {
+    static func load(account: String) -> String {
         var query = baseQuery(account: account)
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -126,7 +113,7 @@ enum Keychain {
         return text
     }
 
-    static func save(_ value: String, account: String = mainAccount) {
+    static func save(_ value: String, account: String) {
         SecItemDelete(baseQuery(account: account) as CFDictionary)
         guard !value.isEmpty, let data = value.data(using: .utf8) else { return }
         var query = baseQuery(account: account)
@@ -140,17 +127,28 @@ enum Keychain {
 final class AppSettings: ObservableObject {
     private let defaults: UserDefaults
 
-    @Published var baseURL: String {
-        didSet { defaults.set(baseURL, forKey: "baseURL") }
+    // MARK: 模型库
+
+    @Published private(set) var customModels: [ModelEntry] {
+        didSet { persistCustomModels() }
     }
 
-    @Published var model: String {
-        didSet { defaults.set(model, forKey: "model") }
+    @Published var primaryEntryID: String {
+        didSet { defaults.set(primaryEntryID, forKey: "primaryEntryID") }
     }
 
-    @Published var apiKey: String {
-        didSet { Keychain.save(apiKey) }
+    /// 谷时使用的模型；空字符串表示未设置，此时沿用主接口。
+    @Published var offPeakEntryID: String {
+        didSet { defaults.set(offPeakEntryID, forKey: "offPeakEntryID") }
     }
+
+    /// 按服务商缓存的 API Key，实际值存放在系统钥匙串。
+    @Published private(set) var apiKeys: [String: String] = [:]
+
+    /// 主面板手动选择的模型：只保留在本次运行内，重启后恢复按峰谷规则切换。
+    @Published private(set) var manualEntryID: String?
+
+    // MARK: 其他设置
 
     @Published var targetMode: TargetMode {
         didSet { defaults.set(targetMode.rawValue, forKey: "targetMode") }
@@ -178,18 +176,6 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(scheduleEnabled, forKey: "scheduleEnabled") }
     }
 
-    @Published var offPeakBaseURL: String {
-        didSet { defaults.set(offPeakBaseURL, forKey: "offPeakBaseURL") }
-    }
-
-    @Published var offPeakModel: String {
-        didSet { defaults.set(offPeakModel, forKey: "offPeakModel") }
-    }
-
-    @Published var offPeakAPIKey: String {
-        didSet { Keychain.save(offPeakAPIKey, account: Keychain.offPeakAccount) }
-    }
-
     /// 高峰时段以“距零点的分钟数”保存，方便用较短的时间控件编辑。
     @Published var peakStart1: Int {
         didSet { defaults.set(peakStart1, forKey: "peakStart1") }
@@ -212,42 +198,201 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(weekendIsOffPeak, forKey: "weekendIsOffPeak") }
     }
 
-    /// 主面板手动选择的模型：只保留在本次运行内，重启后恢复按峰谷规则切换。
-    @Published private(set) var manualSlot: ModelSlot? = nil
-
     init(defaults: UserDefaults = .standard, loadAPIKey: Bool = true) {
         self.defaults = defaults
-        let storedURL = defaults.string(forKey: "baseURL") ?? ""
-        let storedModel = defaults.string(forKey: "model") ?? ""
+
         let storedMode = defaults.string(forKey: "targetMode") ?? ""
         let storedPreset = defaults.string(forKey: "hotKeyPreset") ?? ""
 
         keepPanelOpen = defaults.bool(forKey: "keepPanelOpen")
-        baseURL = storedURL
-        model = storedModel
         targetMode = TargetMode(rawValue: storedMode) ?? .auto
         hotKeyPreset = HotKeyPreset(rawValue: storedPreset) ?? .optionD
         autoTranslate = defaults.object(forKey: "autoTranslate") as? Bool ?? true
         fillFromClipboard = defaults.object(forKey: "fillFromClipboard") as? Bool ?? true
-        apiKey = loadAPIKey ? Keychain.load() : ""
 
         scheduleEnabled = defaults.object(forKey: "scheduleEnabled") as? Bool ?? false
-        offPeakBaseURL = defaults.string(forKey: "offPeakBaseURL") ?? ""
-        offPeakModel = defaults.string(forKey: "offPeakModel") ?? ""
-        offPeakAPIKey = loadAPIKey ? Keychain.load(account: Keychain.offPeakAccount) : ""
         peakStart1 = defaults.object(forKey: "peakStart1") as? Int ?? 9 * 60
         peakEnd1 = defaults.object(forKey: "peakEnd1") as? Int ?? 12 * 60
         peakStart2 = defaults.object(forKey: "peakStart2") as? Int ?? 14 * 60
         peakEnd2 = defaults.object(forKey: "peakEnd2") as? Int ?? 18 * 60
         weekendIsOffPeak = defaults.object(forKey: "weekendIsOffPeak") as? Bool ?? true
+
+        var custom = (defaults.data(forKey: "customModels").flatMap {
+            try? JSONDecoder().decode([ModelEntry].self, from: $0)
+        }) ?? []
+
+        var primaryID = defaults.string(forKey: "primaryEntryID") ?? ""
+        var offPeakID = defaults.string(forKey: "offPeakEntryID") ?? ""
+
+        // 旧版本的 baseURL / model 字段迁移为模型库条目。
+        let storedURL = defaults.string(forKey: "baseURL") ?? ""
+        let storedModel = defaults.string(forKey: "model") ?? ""
+        let storedOffPeakURL = defaults.string(forKey: "offPeakBaseURL") ?? ""
+        let storedOffPeakModel = defaults.string(forKey: "offPeakModel") ?? ""
+
+        func migratedEntry(url: String, model: String) -> ModelEntry {
+            ModelEntry(
+                id: "custom-" + Self.stableID("\(url)|\(model)"),
+                name: model,
+                baseURL: url,
+                model: model,
+                isBuiltIn: false
+            )
+        }
+
+        if !custom.contains(where: { $0.id == primaryID }) {
+            if !storedURL.isEmpty, !storedModel.isEmpty {
+                if let preset = ModelLibrary.preset(baseURL: storedURL, model: storedModel) {
+                    custom.append(preset.saved)
+                    primaryID = preset.id
+                } else {
+                    let entry = migratedEntry(url: storedURL, model: storedModel)
+                    custom.removeAll { $0.id == entry.id }
+                    custom.append(entry)
+                    primaryID = entry.id
+                }
+            } else if let fallback = ModelLibrary.preset(ModelLibrary.defaultEntryID) {
+                custom.append(fallback.saved)
+                primaryID = fallback.id
+            }
+        }
+
+        if !offPeakID.isEmpty, !custom.contains(where: { $0.id == offPeakID }) {
+            offPeakID = ""
+        }
+        if offPeakID.isEmpty, !storedOffPeakURL.isEmpty, !storedOffPeakModel.isEmpty {
+            if let preset = ModelLibrary.preset(baseURL: storedOffPeakURL, model: storedOffPeakModel) {
+                if !custom.contains(where: { $0.id == preset.id }) { custom.append(preset.saved) }
+                offPeakID = preset.id
+            } else {
+                let entry = migratedEntry(url: storedOffPeakURL, model: storedOffPeakModel)
+                custom.removeAll { $0.id == entry.id }
+                custom.append(entry)
+                offPeakID = entry.id
+            }
+        }
+
+        self.customModels = custom
+        self.primaryEntryID = primaryID
+        self.offPeakEntryID = offPeakID
+        self.manualEntryID = nil
+        self.apiKeys = [:]
+
+        if loadAPIKey {
+            migrateLegacyKey(Keychain.legacyMainAccount, to: custom.first { $0.id == primaryID }?.keyAccount)
+            migrateLegacyKey(Keychain.legacyOffPeakAccount, to: custom.first { $0.id == offPeakID }?.keyAccount)
+
+            var keys: [String: String] = [:]
+            for entry in custom {
+                let value = Keychain.load(account: "api-key:" + entry.keyAccount)
+                if !value.isEmpty { keys[entry.keyAccount] = value }
+            }
+            self.apiKeys = keys
+        }
+
+        // init 中的赋值不会触发 didSet，迁移结果需要显式写回。
+        defaults.set(primaryID, forKey: "primaryEntryID")
+        defaults.set(offPeakID, forKey: "offPeakEntryID")
+        persistCustomModels()
+    }
+
+    // MARK: 模型库
+
+    /// 只包含用户添加过的模型；内置预设不会自动出现在这里。
+    var library: [ModelEntry] { customModels }
+
+    var presets: [ModelEntry] { ModelLibrary.all }
+
+    func entry(_ id: String) -> ModelEntry? {
+        customModels.first { $0.id == id }
+    }
+
+    var primaryEntry: ModelEntry? {
+        entry(primaryEntryID) ?? customModels.first
+    }
+
+    var offPeakEntry: ModelEntry? {
+        offPeakEntryID.isEmpty ? nil : entry(offPeakEntryID)
+    }
+
+    /// 从内置预设添加模型到库；重复添加时返回已有条目。
+    @discardableResult
+    func addPreset(_ preset: ModelEntry) -> ModelEntry {
+        if let existing = customModels.first(where: { $0.id == preset.id }) { return existing }
+        let entry = preset.saved
+        customModels.append(entry)
+        return entry
+    }
+
+    @discardableResult
+    func addCustomModel(name: String, baseURL: String, model: String) -> ModelEntry? {
+        let url = baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        let identifier = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !url.isEmpty, !identifier.isEmpty else { return nil }
+
+        let entry = ModelEntry(
+            id: "custom-" + Self.stableID("\(url)|\(identifier)"),
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? identifier : name.trimmingCharacters(in: .whitespacesAndNewlines),
+            baseURL: url,
+            model: identifier,
+            isBuiltIn: false
+        )
+        if let index = customModels.firstIndex(where: { $0.baseURL == url && $0.model == identifier }) {
+            customModels[index] = entry
+        } else if let index = customModels.firstIndex(where: { $0.id == entry.id }) {
+            customModels[index] = entry
+        } else {
+            customModels.append(entry)
+        }
+        return entry
+    }
+
+    func removeCustomModel(_ id: String) {
+        customModels.removeAll { $0.id == id }
+        if primaryEntryID == id, let fallback = library.first(where: { $0.id == ModelLibrary.defaultEntryID }) ?? library.first {
+            primaryEntryID = fallback.id
+        }
+        if offPeakEntryID == id { offPeakEntryID = "" }
+        if manualEntryID == id { manualEntryID = nil }
+    }
+
+    // MARK: API Key
+
+    func apiKey(for account: String) -> String { apiKeys[account] ?? "" }
+
+    func setAPIKey(_ value: String, for account: String) {
+        apiKeys[account] = value
+        Keychain.save(value, account: "api-key:" + account)
+    }
+
+    // MARK: 模型选择
+
+    var activeEntry: ModelEntry? {
+        if let manualEntryID, let selected = entry(manualEntryID) { return selected }
+        if scheduleEnabled, offPeakEntry != nil, currentTier() == .offPeak { return offPeakEntry }
+        return primaryEntry
+    }
+
+    var activeModelName: String { activeEntry?.model ?? "" }
+
+    var isManualModel: Bool { manualEntryID != nil }
+
+    func selectModel(_ id: String) {
+        manualEntryID = id
+    }
+
+    func clearManualModel() {
+        manualEntryID = nil
+    }
+
+    var activeTierSummary: String {
+        if manualEntryID != nil { return "手动 · \(activeModelName)" }
+        guard scheduleEnabled, offPeakEntry != nil else { return "未启用" }
+        return "\(currentTier().title) · \(activeModelName)"
     }
 
     // MARK: 时段判断
-
-    var offPeakConfigured: Bool {
-        !offPeakBaseURL.trimmingCharacters(in: .whitespaces).isEmpty
-            && !offPeakModel.trimmingCharacters(in: .whitespaces).isEmpty
-    }
 
     func currentTier(at date: Date = Date(), calendar: Calendar = .current) -> ModelTier {
         if weekendIsOffPeak {
@@ -263,75 +408,46 @@ final class AppSettings: ObservableObject {
         return isPeak ? .peak : .offPeak
     }
 
-    /// 实际使用的档位：手动选择优先，其次是峰谷规则；配置不完整时回退主接口。
-    var activeSlot: ModelSlot {
-        if let manualSlot, isSlotConfigured(manualSlot) { return manualSlot }
-        if scheduleEnabled, offPeakConfigured, currentTier() == .offPeak { return .offPeak }
-        return .primary
-    }
-
-    func isSlotConfigured(_ slot: ModelSlot) -> Bool {
-        switch slot {
-        case .primary:
-            return !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
-                && !model.trimmingCharacters(in: .whitespaces).isEmpty
-        case .offPeak:
-            return offPeakConfigured
-        }
-    }
-
-    /// 主面板下拉里可选的模型，按已经填写的接口去重。
-    var modelOptions: [ModelOption] {
-        var options: [ModelOption] = []
-        if isSlotConfigured(.primary) {
-            options.append(ModelOption(slot: .primary, model: model, detail: baseURL))
-        }
-        if offPeakConfigured, offPeakModel != model || offPeakBaseURL != baseURL {
-            options.append(ModelOption(slot: .offPeak, model: offPeakModel, detail: offPeakBaseURL))
-        }
-        return options
-    }
-
-    var activeModelName: String {
-        activeSlot == .offPeak ? offPeakModel : model
-    }
-
-    var isManualModel: Bool { manualSlot != nil }
-
-    func selectModel(_ slot: ModelSlot) {
-        manualSlot = slot
-    }
-
-    func clearManualModel() {
-        manualSlot = nil
-    }
-
-    var activeTierSummary: String {
-        if manualSlot != nil { return "手动 · \(activeModelName)" }
-        guard scheduleEnabled else { return "未启用" }
-        guard offPeakConfigured else { return "\(currentTier().title) · 谷时配置未填写，沿用主配置" }
-        return "\(currentTier().title) · \(activeModelName)"
-    }
-
     var isConfigured: Bool {
-        !config.baseURL.trimmingCharacters(in: .whitespaces).isEmpty
-            && !config.model.trimmingCharacters(in: .whitespaces).isEmpty
+        guard let entry = activeEntry else { return false }
+        return !entry.baseURL.trimmingCharacters(in: .whitespaces).isEmpty
+            && !entry.model.trimmingCharacters(in: .whitespaces).isEmpty
     }
 
     var config: TranslatorConfig {
-        if activeSlot == .offPeak {
-            return TranslatorConfig(
-                baseURL: offPeakBaseURL,
-                apiKey: offPeakAPIKey,
-                model: offPeakModel,
-                targetMode: targetMode
-            )
+        guard let entry = activeEntry else {
+            return TranslatorConfig(baseURL: "", apiKey: "", model: "", targetMode: targetMode)
         }
         return TranslatorConfig(
-            baseURL: baseURL,
-            apiKey: apiKey,
-            model: model,
+            baseURL: entry.baseURL,
+            apiKey: apiKey(for: entry.keyAccount),
+            model: entry.model,
             targetMode: targetMode
         )
+    }
+
+    // MARK: 私有
+
+    private func persistCustomModels() {
+        guard let data = try? JSONEncoder().encode(customModels) else { return }
+        defaults.set(data, forKey: "customModels")
+    }
+
+    private func migrateLegacyKey(_ legacyAccount: String, to account: String?) {
+        guard let account, !account.isEmpty else { return }
+        let legacy = Keychain.load(account: legacyAccount)
+        guard !legacy.isEmpty else { return }
+        if Keychain.load(account: "api-key:" + account).isEmpty {
+            Keychain.save(legacy, account: "api-key:" + account)
+        }
+    }
+
+    /// 让迁移生成的条目 id 在多次启动之间保持稳定。
+    private static func stableID(_ value: String) -> String {
+        var hash: UInt64 = 5381
+        for byte in value.utf8 {
+            hash = (hash &* 33) ^ UInt64(byte)
+        }
+        return String(hash, radix: 16)
     }
 }

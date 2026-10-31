@@ -120,18 +120,18 @@ struct TranslateView: View {
 
     private var modelMenu: some View {
         Menu {
-            if settings.modelOptions.isEmpty {
+            if settings.library.isEmpty {
                 Text("尚未配置模型")
             } else {
-                ForEach(settings.modelOptions) { option in
+                ForEach(settings.library) { entry in
                     Button {
-                        settings.selectModel(option.slot)
+                        settings.selectModel(entry.id)
                         vm.targetChanged()
                     } label: {
-                        if settings.activeSlot == option.slot {
-                            Label(option.model, systemImage: "checkmark")
+                        if settings.activeEntry?.id == entry.id {
+                            Label(entry.name, systemImage: "checkmark")
                         } else {
-                            Text(option.model)
+                            Text(entry.name)
                         }
                     }
                 }
@@ -146,7 +146,7 @@ struct TranslateView: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "cpu")
-                Text(settings.activeModelName.isEmpty ? "未配置模型" : settings.activeModelName)
+                Text(settings.activeEntry?.name ?? "未配置模型")
                     .lineLimit(1)
                 if settings.isManualModel {
                     Text("手动")

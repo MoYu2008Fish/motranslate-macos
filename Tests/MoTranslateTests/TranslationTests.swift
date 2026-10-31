@@ -30,6 +30,9 @@ import Foundation
     #expect(Translator.endpoint(from: " example.com/v1/ ")?.absoluteString == "https://example.com/v1/chat/completions")
     #expect(Translator.endpoint(from: "http://localhost:11434")?.absoluteString == "http://localhost:11434/v1/chat/completions")
     #expect(Translator.endpoint(from: "https://example.com/v1/chat/completions")?.absoluteString == "https://example.com/v1/chat/completions")
+    // 智谱与 Gemini 的兼容端点已经带版本段，不能再拼一层 /v1。
+    #expect(Translator.endpoint(from: "https://open.bigmodel.cn/api/paas/v4")?.absoluteString == "https://open.bigmodel.cn/api/paas/v4/chat/completions")
+    #expect(Translator.endpoint(from: "https://generativelanguage.googleapis.com/v1beta/openai")?.absoluteString == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions")
     #expect(Translator.endpoint(from: "") == nil)
 }
 
@@ -37,8 +40,9 @@ import Foundation
     let name = "MoTranslateTests." + UUID().uuidString
     let defaults = UserDefaults(suiteName: name)!
     let settings = AppSettings(defaults: defaults, loadAPIKey: false)
-    settings.baseURL = "http://localhost:12345/v1"
-    settings.model = "test"
+    if let entry = settings.addCustomModel(name: "Test", baseURL: "http://localhost:12345/v1", model: "test") {
+        settings.primaryEntryID = entry.id
+    }
     settings.autoTranslate = false
     return (settings, defaults, name)
 }
@@ -163,27 +167,63 @@ import Foundation
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
 
-    settings.model = "local-4b"
-    settings.offPeakBaseURL = "https://api.deepseek.com/v1"
-    settings.offPeakModel = "deepseek-chat"
+    let local = settings.addCustomModel(name: "Local", baseURL: "http://localhost:11434/v1", model: "local-4b")!
+    let cloud = settings.addCustomModel(name: "Cloud", baseURL: "https://api.deepseek.com/v1", model: "deepseek-chat")!
+    settings.primaryEntryID = local.id
+    settings.offPeakEntryID = cloud.id
     settings.scheduleEnabled = false
 
-    #expect(settings.activeSlot == .primary)
+    #expect(settings.activeEntry?.id == local.id)
     #expect(settings.activeModelName == "local-4b")
-    #expect(settings.modelOptions.count == 2)
 
-    settings.selectModel(.offPeak)
+    settings.selectModel(cloud.id)
     #expect(settings.isManualModel)
-    #expect(settings.activeSlot == .offPeak)
+    #expect(settings.activeEntry?.id == cloud.id)
     #expect(settings.config.model == "deepseek-chat")
 
     settings.clearManualModel()
     #expect(!settings.isManualModel)
-    #expect(settings.activeSlot == .primary)
+    #expect(settings.activeEntry?.id == local.id)
 
     // 手动选择只存在于本次运行内：新实例读同一份 defaults 时应恢复默认。
-    settings.selectModel(.offPeak)
+    settings.selectModel(cloud.id)
     let restarted = AppSettings(defaults: defaults, loadAPIKey: false)
-    #expect(restarted.manualSlot == nil)
-    #expect(restarted.activeSlot == .primary)
+    #expect(restarted.manualEntryID == nil)
+    #expect(restarted.activeEntry?.id == local.id)
+}
+
+@MainActor @Test func customModelIsPersistedAndSelectable() {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    let entry = settings.addCustomModel(name: "自建", baseURL: "https://api.example.com/v1", model: "my-model")!
+    settings.primaryEntryID = entry.id
+    #expect(settings.customModels.contains { $0.id == entry.id })
+    #expect(settings.activeEntry?.model == "my-model")
+
+    let restarted = AppSettings(defaults: defaults, loadAPIKey: false)
+    #expect(restarted.customModels.contains { $0.id == entry.id })
+    #expect(restarted.primaryEntry?.model == "my-model")
+
+    restarted.removeCustomModel(entry.id)
+    #expect(!restarted.customModels.contains { $0.id == entry.id })
+    #expect(restarted.primaryEntry != nil)
+}
+
+@MainActor @Test func presetsDoNotEnterLibraryUntilAdded() {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    // 内置预设只是模板，未添加前不应出现在模型库里。
+    #expect(!settings.library.contains { $0.model == "gpt-6.1-terra" })
+    #expect(settings.library.count < ModelLibrary.all.count)
+
+    let preset = ModelLibrary.preset("deepseek-flash")!
+    let added = settings.addPreset(preset)
+    #expect(settings.library.contains { $0.id == added.id })
+    #expect(settings.library.count == 3)
+
+    // 重复添加同一条预设不会产生副本。
+    settings.addPreset(preset)
+    #expect(settings.library.count == 3)
 }

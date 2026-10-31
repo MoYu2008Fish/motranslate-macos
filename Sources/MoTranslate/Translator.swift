@@ -175,10 +175,13 @@ enum Translator {
             value = "https://" + value
         }
         while value.hasSuffix("/") { value.removeLast() }
-        if value.lowercased().hasSuffix("/chat/completions") {
+        let lower = value.lowercased()
+        if lower.hasSuffix("/chat/completions") {
             return URL(string: value)
         }
-        if value.lowercased().hasSuffix("/v1") {
+        // 已经带版本段或 OpenAI 兼容前缀时直接补路径，避免拼成 /v4/v1/chat/completions。
+        if lower.hasSuffix("/openai") || lower.hasSuffix("/v1") || lower.hasSuffix("/v2")
+            || lower.hasSuffix("/v3") || lower.hasSuffix("/v4") || lower.hasSuffix("/v1beta") {
             return URL(string: value + "/chat/completions")
         }
         return URL(string: value + "/v1/chat/completions")

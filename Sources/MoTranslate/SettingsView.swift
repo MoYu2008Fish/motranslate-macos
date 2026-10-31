@@ -10,6 +10,12 @@ struct SettingsView: View {
 
     @State private var revealKey = false
     @State private var testState: TestState = .idle
+    @State private var draftName = ""
+    @State private var draftBaseURL = ""
+    @State private var draftModel = ""
+    @State private var draftAPIKey = ""
+    @State private var selectedPresetID = ""
+    @State private var saveHint: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
@@ -31,7 +37,8 @@ struct SettingsView: View {
                 .help("关闭设置并回到翻译面板")
             }.padding(.horizontal, 24).padding(.top, 20)
             TabView {
-                settingsPage { apiCard; scheduleCard }.tabItem { Label("翻译服务", systemImage: "network") }
+                settingsPage { apiCard; customModelCard; scheduleCard }
+                    .tabItem { Label("翻译服务", systemImage: "network") }
                 settingsPage { behaviorCard; selectionCard }.tabItem { Label("通用与快捷键", systemImage: "keyboard") }
                 settingsPage { aboutCard }.tabItem { Label("关于墨译", systemImage: "info.circle") }
             }.padding(.horizontal, 16).padding(.bottom, 16)
@@ -52,28 +59,27 @@ struct SettingsView: View {
     private var apiCard: some View {
         SettingsCard(title: "翻译接口") {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 6) {
-                    Text("快速填入")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                    ForEach(Preset.all) { preset in
-                        Button(preset.name) {
-                            settings.baseURL = preset.baseURL
-                            settings.model = preset.model
-                            testState = .idle
+                HStack(spacing: 10) {
+                    Text("主接口")
+                        .font(.system(size: 12))
+                        .frame(width: 78, alignment: .leading)
+                    Picker("", selection: $settings.primaryEntryID) {
+                        ForEach(settings.library) { entry in
+                            Text(entry.name).tag(entry.id)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.mini)
                     }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: 300)
+                    Spacer()
                 }
-                .padding(.bottom, 2)
 
-                labeledField("Base URL", text: $settings.baseURL,
-                             placeholder: "https://api.openai.com/v1")
-                labeledField("API Key", text: $settings.apiKey,
-                             placeholder: "sk-…（本地模型可留空）", secure: !revealKey)
-                labeledField("模型", text: $settings.model,
-                             placeholder: "gpt-4o-mini")
+                if let entry = settings.primaryEntry {
+                    endpointHint(entry)
+                    labeledField("API Key", text: keyBinding(entry.keyAccount),
+                                 placeholder: isLocal(entry) ? "本地模型可留空" : "sk-…",
+                                 secure: !revealKey)
+                }
 
                 HStack(spacing: 8) {
                     Toggle("显示密钥", isOn: $revealKey)
@@ -93,6 +99,91 @@ struct SettingsView: View {
                 }
 
                 testStatus
+            }
+        }
+    }
+
+    // MARK: 自有模型库
+
+    private var customModelCard: some View {
+        SettingsCard(title: "自有模型库") {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("填好 Base URL 和模型标识后保存，之后在高峰、谷时和主面板里都能直接选择，不用重复填写。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 10) {
+                    Text("从预设添加")
+                        .font(.system(size: 12))
+                        .frame(width: 78, alignment: .leading)
+                    Picker("", selection: $selectedPresetID) {
+                        Text("选择服务商与模型…").tag("")
+                        ForEach(settings.presets) { preset in
+                            Text(preset.name).tag(preset.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .frame(maxWidth: 300)
+                    Spacer()
+                }
+                .onChange(of: selectedPresetID) { _, id in
+                    guard let preset = settings.presets.first(where: { $0.id == id }) else { return }
+                    draftName = preset.name
+                    draftBaseURL = preset.baseURL
+                    draftModel = preset.model
+                    saveHint = nil
+                }
+
+                labeledField("名称", text: $draftName, placeholder: "可选，默认使用模型名")
+                labeledField("Base URL", text: $draftBaseURL, placeholder: "https://api.example.com/v1")
+                labeledField("模型", text: $draftModel, placeholder: "model-name")
+                labeledField("API Key", text: draftKeyBinding,
+                             placeholder: "保存后按服务商保存在钥匙串", secure: !revealKey)
+
+                HStack(spacing: 8) {
+                    if let saveHint {
+                        Text(saveHint)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.green)
+                    }
+                    Spacer()
+                    Button("保存到模型库") { saveCustomModel() }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                        .disabled(draftBaseURL.trimmingCharacters(in: .whitespaces).isEmpty
+                                  || draftModel.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+
+                if !settings.customModels.isEmpty {
+                    Divider().opacity(0.5)
+                    ForEach(settings.customModels) { entry in
+                        HStack(spacing: 8) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(entry.name).font(.system(size: 12))
+                                Text("\(entry.model) · \(entry.baseURL)")
+                                    .font(.system(size: 10))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Button { settings.removeCustomModel(entry.id) } label: {
+                                Image(systemName: "trash")
+                            }
+                            .buttonStyle(.borderless)
+                            .foregroundStyle(.secondary)
+                            .help("从模型库移除")
+                        }
+                    }
+                }
+
+                HStack(spacing: 6) {
+                    Text("预设目录核对自 models.dev（2026-10），实际可调用代号以服务商文档为准。")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.tertiary)
+                    Link("查看目录", destination: URL(string: "https://models.dev")!)
+                        .font(.system(size: 10.5))
+                }
             }
         }
     }
@@ -156,12 +247,35 @@ struct SettingsView: View {
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.secondary)
 
-                    labeledField("Base URL", text: $settings.offPeakBaseURL,
-                                 placeholder: "https://api.deepseek.com/v1")
-                    labeledField("API Key", text: $settings.offPeakAPIKey,
-                                 placeholder: "sk-…（本地模型可留空）", secure: !revealKey)
-                    labeledField("模型", text: $settings.offPeakModel,
-                                 placeholder: "deepseek-chat")
+                    HStack(spacing: 10) {
+                        Text("模型")
+                            .font(.system(size: 12))
+                            .frame(width: 78, alignment: .leading)
+                        Picker("", selection: $settings.offPeakEntryID) {
+                            Text("沿用主接口").tag("")
+                            ForEach(settings.library) { entry in
+                                Text(entry.name).tag(entry.id)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: 300)
+                        Spacer()
+                    }
+
+                    if let entry = settings.offPeakEntry {
+                        endpointHint(entry)
+                        if entry.keyAccount == settings.primaryEntry?.keyAccount {
+                            Text("与主接口使用同一服务商，共用上面的 API Key。")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                                .padding(.leading, 88)
+                        } else {
+                            labeledField("API Key", text: keyBinding(entry.keyAccount),
+                                         placeholder: isLocal(entry) ? "本地模型可留空" : "sk-…",
+                                         secure: !revealKey)
+                        }
+                    }
 
                     Text("当前生效：\(settings.activeTierSummary)")
                         .font(.system(size: 11))
@@ -303,7 +417,7 @@ struct SettingsView: View {
         SettingsCard(title: "关于") {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("墨译 1.4")
+                    Text("墨译 1.6")
                         .font(.system(size: 12, weight: .semibold))
                     Text("原生 SwiftUI · 常驻菜单栏 · 数据只经过你自己的接口")
                         .font(.system(size: 11))
@@ -312,6 +426,61 @@ struct SettingsView: View {
                 Spacer()
             }
         }
+    }
+
+    // MARK: 模型与密钥
+
+    private func keyBinding(_ account: String) -> Binding<String> {
+        Binding(
+            get: { settings.apiKey(for: account) },
+            set: { settings.setAPIKey($0, for: account) }
+        )
+    }
+
+    private var draftKeyBinding: Binding<String> {
+        Binding(get: { draftAPIKey }, set: { draftAPIKey = $0 })
+    }
+
+    private func isLocal(_ entry: ModelEntry) -> Bool {
+        let account = entry.keyAccount
+        return account.hasPrefix("localhost")
+            || account.hasPrefix("127.0.0.1")
+            || account.hasPrefix("[::1]")
+    }
+
+    private func endpointHint(_ entry: ModelEntry) -> some View {
+        HStack(spacing: 10) {
+            Text("Base URL")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .frame(width: 78, alignment: .leading)
+            Text(entry.baseURL)
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .textSelection(.enabled)
+            Spacer()
+        }
+    }
+
+    private func saveCustomModel() {
+        guard let entry = settings.addCustomModel(
+            name: draftName,
+            baseURL: draftBaseURL,
+            model: draftModel
+        ) else { return }
+
+        if !draftAPIKey.trimmingCharacters(in: .whitespaces).isEmpty {
+            settings.setAPIKey(draftAPIKey, for: entry.keyAccount)
+        }
+        settings.primaryEntryID = entry.id
+        draftName = ""
+        draftBaseURL = ""
+        draftModel = ""
+        draftAPIKey = ""
+        selectedPresetID = ""
+        saveHint = "已保存并设为主接口"
+        testState = .idle
     }
 
     // MARK: 组件
@@ -355,8 +524,14 @@ struct SettingsView: View {
     }
 
     private func runTest() {
+        guard let entry = settings.primaryEntry else { return }
         testState = .running
-        let config = settings.config
+        let config = TranslatorConfig(
+            baseURL: entry.baseURL,
+            apiKey: settings.apiKey(for: entry.keyAccount),
+            model: entry.model,
+            targetMode: settings.targetMode
+        )
         Task {
             do {
                 let result = try await Translator.translate(
@@ -381,20 +556,6 @@ enum TestState {
     case running
     case success(String)
     case failure(String)
-}
-
-struct Preset: Identifiable {
-    let id = UUID()
-    let name: String
-    let baseURL: String
-    let model: String
-
-    static let all: [Preset] = [
-        Preset(name: "OpenAI", baseURL: "https://api.openai.com/v1", model: "gpt-4o-mini"),
-        Preset(name: "DeepSeek", baseURL: "https://api.deepseek.com/v1", model: "deepseek-chat"),
-        Preset(name: "硅基流动", baseURL: "https://api.siliconflow.cn/v1", model: "Qwen/Qwen2.5-7B-Instruct"),
-        Preset(name: "Ollama", baseURL: "http://localhost:11434/v1", model: "qwen2.5:7b")
-    ]
 }
 
 struct SettingsCard<Content: View>: View {
