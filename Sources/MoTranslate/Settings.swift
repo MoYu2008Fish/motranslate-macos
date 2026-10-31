@@ -83,6 +83,21 @@ enum ModelTier {
     }
 }
 
+/// 两套接口配置的固定位置，用于主面板手动选择模型。
+enum ModelSlot: String, Identifiable {
+    case primary
+    case offPeak
+
+    var id: String { rawValue }
+}
+
+struct ModelOption: Identifiable {
+    let slot: ModelSlot
+    let model: String
+    let detail: String
+    var id: String { slot.rawValue }
+}
+
 // MARK: - Keychain
 
 enum Keychain {
@@ -197,6 +212,9 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(weekendIsOffPeak, forKey: "weekendIsOffPeak") }
     }
 
+    /// 主面板手动选择的模型：只保留在本次运行内，重启后恢复按峰谷规则切换。
+    @Published private(set) var manualSlot: ModelSlot? = nil
+
     init(defaults: UserDefaults = .standard, loadAPIKey: Bool = true) {
         self.defaults = defaults
         let storedURL = defaults.string(forKey: "baseURL") ?? ""
@@ -245,17 +263,54 @@ final class AppSettings: ObservableObject {
         return isPeak ? .peak : .offPeak
     }
 
-    /// 实际使用的档位：未开启调度或谷时配置不完整时，一律使用主配置。
-    var activeTier: ModelTier {
-        guard scheduleEnabled, offPeakConfigured else { return .peak }
-        return currentTier()
+    /// 实际使用的档位：手动选择优先，其次是峰谷规则；配置不完整时回退主接口。
+    var activeSlot: ModelSlot {
+        if let manualSlot, isSlotConfigured(manualSlot) { return manualSlot }
+        if scheduleEnabled, offPeakConfigured, currentTier() == .offPeak { return .offPeak }
+        return .primary
+    }
+
+    func isSlotConfigured(_ slot: ModelSlot) -> Bool {
+        switch slot {
+        case .primary:
+            return !baseURL.trimmingCharacters(in: .whitespaces).isEmpty
+                && !model.trimmingCharacters(in: .whitespaces).isEmpty
+        case .offPeak:
+            return offPeakConfigured
+        }
+    }
+
+    /// 主面板下拉里可选的模型，按已经填写的接口去重。
+    var modelOptions: [ModelOption] {
+        var options: [ModelOption] = []
+        if isSlotConfigured(.primary) {
+            options.append(ModelOption(slot: .primary, model: model, detail: baseURL))
+        }
+        if offPeakConfigured, offPeakModel != model || offPeakBaseURL != baseURL {
+            options.append(ModelOption(slot: .offPeak, model: offPeakModel, detail: offPeakBaseURL))
+        }
+        return options
+    }
+
+    var activeModelName: String {
+        activeSlot == .offPeak ? offPeakModel : model
+    }
+
+    var isManualModel: Bool { manualSlot != nil }
+
+    func selectModel(_ slot: ModelSlot) {
+        manualSlot = slot
+    }
+
+    func clearManualModel() {
+        manualSlot = nil
     }
 
     var activeTierSummary: String {
+        if manualSlot != nil { return "手动 · \(activeModelName)" }
         guard scheduleEnabled else { return "未启用" }
         guard offPeakConfigured else { return "\(currentTier().title) · 谷时配置未填写，沿用主配置" }
-        let activeModel = activeTier == .offPeak ? offPeakModel : model
-        return "\(activeTier.title) · \(activeModel)"
+        return "\(currentTier().title) · \(activeModelName)"
     }
 
     var isConfigured: Bool {
@@ -264,7 +319,7 @@ final class AppSettings: ObservableObject {
     }
 
     var config: TranslatorConfig {
-        if activeTier == .offPeak {
+        if activeSlot == .offPeak {
             return TranslatorConfig(
                 baseURL: offPeakBaseURL,
                 apiKey: offPeakAPIKey,

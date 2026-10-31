@@ -158,3 +158,32 @@ import Foundation
     #expect(settings.currentTier(at: thursdayLunch, calendar: calendar) == .offPeak)
     #expect(settings.currentTier(at: saturdayMorning, calendar: calendar) == .offPeak)
 }
+
+@MainActor @Test func manualModelOverridesScheduleAndResetsOnRestart() {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    settings.model = "local-4b"
+    settings.offPeakBaseURL = "https://api.deepseek.com/v1"
+    settings.offPeakModel = "deepseek-chat"
+    settings.scheduleEnabled = false
+
+    #expect(settings.activeSlot == .primary)
+    #expect(settings.activeModelName == "local-4b")
+    #expect(settings.modelOptions.count == 2)
+
+    settings.selectModel(.offPeak)
+    #expect(settings.isManualModel)
+    #expect(settings.activeSlot == .offPeak)
+    #expect(settings.config.model == "deepseek-chat")
+
+    settings.clearManualModel()
+    #expect(!settings.isManualModel)
+    #expect(settings.activeSlot == .primary)
+
+    // 手动选择只存在于本次运行内：新实例读同一份 defaults 时应恢复默认。
+    settings.selectModel(.offPeak)
+    let restarted = AppSettings(defaults: defaults, loadAPIKey: false)
+    #expect(restarted.manualSlot == nil)
+    #expect(restarted.activeSlot == .primary)
+}

@@ -12,6 +12,8 @@ final class TranslateViewModel: ObservableObject {
     @Published var sourceLabel = ""
     @Published var targetLabel = ""
     @Published var progressText: String?
+    @Published var progressValue: Double?
+    @Published var activeModelLabel = ""
     @Published var copied = false
     @Published var replaced = false
     @Published var focusTick = 0
@@ -84,9 +86,11 @@ final class TranslateViewModel: ObservableObject {
         copied = false
         replaced = false
         progressText = nil
+        progressValue = nil
         isWorking = true
 
         let config = settings.config
+        activeModelLabel = config.model
         currentTask = Task { [weak self] in
             guard let self else { return }
             do {
@@ -94,6 +98,7 @@ final class TranslateViewModel: ObservableObject {
                     DispatchQueue.main.async {
                         guard let self, currentGeneration == self.generation else { return }
                         self.progressText = "正在翻译 \(current)/\(total) 段"
+                        self.progressValue = total > 0 ? Double(current) / Double(total) : nil
                     }
                 }
                 guard !Task.isCancelled, currentGeneration == self.generation else { return }
@@ -101,12 +106,14 @@ final class TranslateViewModel: ObservableObject {
                 self.sourceLabel = Translator.displayName(result.sourceCode)
                 self.targetLabel = Translator.displayName(result.targetCode)
                 self.progressText = nil
+                self.progressValue = nil
                 self.isWorking = false
             } catch is CancellationError {
                 // 被新请求取代，保持新请求的状态
             } catch {
                 guard !Task.isCancelled, currentGeneration == self.generation else { return }
                 self.progressText = nil
+                self.progressValue = nil
                 self.errorText = error.localizedDescription
                 self.isWorking = false
             }
@@ -118,6 +125,7 @@ final class TranslateViewModel: ObservableObject {
         currentTask?.cancel()
         debounceTask?.cancel()
         progressText = nil
+        progressValue = nil
         isWorking = false
     }
 
@@ -196,6 +204,7 @@ final class TranslateViewModel: ObservableObject {
         output = ""
         isWorking = false
         progressText = nil
+        progressValue = nil
         replaced = false
         errorText = "没有检测到选中的文字。先选中内容，再按快捷键。"
     }
@@ -210,6 +219,8 @@ final class TranslateViewModel: ObservableObject {
         sourceLabel = ""
         targetLabel = ""
         progressText = nil
+        progressValue = nil
+        activeModelLabel = ""
         isWorking = false
         copied = false
         replaced = false

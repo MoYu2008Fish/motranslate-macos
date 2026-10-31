@@ -95,6 +95,16 @@ struct TranslateView: View {
             }
             .labelsHidden().pickerStyle(.menu).fixedSize()
             Spacer()
+            modelMenu
+            if settings.isManualModel {
+                Button("恢复默认") {
+                    settings.clearManualModel()
+                    vm.targetChanged()
+                }
+                .buttonStyle(.borderless)
+                .font(.system(size: 10.5))
+                .help("恢复按峰谷规则自动切换模型")
+            }
             if !permissions.accessibilityGranted {
                 Button { permissions.openSystemSettings() } label: {
                     Label("开启划词", systemImage: "cursorarrow.click.2")
@@ -106,6 +116,52 @@ struct TranslateView: View {
             }
         }
         .padding(.horizontal, 6)
+    }
+
+    private var modelMenu: some View {
+        Menu {
+            if settings.modelOptions.isEmpty {
+                Text("尚未配置模型")
+            } else {
+                ForEach(settings.modelOptions) { option in
+                    Button {
+                        settings.selectModel(option.slot)
+                        vm.targetChanged()
+                    } label: {
+                        if settings.activeSlot == option.slot {
+                            Label(option.model, systemImage: "checkmark")
+                        } else {
+                            Text(option.model)
+                        }
+                    }
+                }
+            }
+            if settings.isManualModel {
+                Divider()
+                Button("恢复默认（自动切换）") {
+                    settings.clearManualModel()
+                    vm.targetChanged()
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "cpu")
+                Text(settings.activeModelName.isEmpty ? "未配置模型" : settings.activeModelName)
+                    .lineLimit(1)
+                if settings.isManualModel {
+                    Text("手动")
+                        .font(.system(size: 9, weight: .medium))
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(Color.accentColor.opacity(0.16), in: Capsule())
+                }
+                Image(systemName: "chevron.down").font(.system(size: 8))
+            }
+            .font(.system(size: 11))
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("临时切换模型，重启墨译后恢复默认")
     }
 
     private var inputCard: some View {
@@ -172,8 +228,17 @@ struct TranslateView: View {
                     }
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
-            HStack {
+            HStack(spacing: 8) {
+                if let progress = vm.progressValue {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .controlSize(.mini)
+                        .frame(width: 72)
+                }
                 Text(vm.progressText ?? (vm.isWorking ? "正在翻译" : vm.errorText != nil ? "翻译未完成" : vm.hasOutput ? "翻译完成" : "等待输入"))
+                if !vm.activeModelLabel.isEmpty {
+                    Text("· \(vm.activeModelLabel)").lineLimit(1)
+                }
                 Spacer()
                 Button { vm.useOutputAsInput(); focusInput() } label: {
                     Label("用作原文", systemImage: "arrow.uturn.backward")
@@ -211,11 +276,26 @@ struct PopupView: View {
     var onClose: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: "character.bubble.fill").foregroundStyle(.tint)
                 Text(vm.directionLabel).font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
                 Spacer()
-                if vm.isWorking { ProgressView().controlSize(.mini) }
+                if vm.isWorking {
+                    if let progress = vm.progressValue {
+                        ProgressView(value: progress)
+                            .progressViewStyle(.linear)
+                            .controlSize(.mini)
+                            .frame(width: 46)
+                    } else {
+                        ProgressView().controlSize(.mini)
+                    }
+                }
+                if !vm.activeModelLabel.isEmpty {
+                    Text(vm.activeModelLabel)
+                        .font(.system(size: 9))
+                        .foregroundStyle(.tertiary)
+                        .lineLimit(1)
+                }
                 Button(action: onClose) { Image(systemName: "xmark").frame(width: 24, height: 24) }
                     .buttonStyle(.plain).help("关闭 · esc").accessibilityLabel("关闭划词浮窗")
             }

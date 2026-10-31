@@ -2,15 +2,15 @@
 
 [中文说明](../README.zh-CN.md) · [English](../README.md) · [日本語](../README.ja.md)
 
-这些截图来自实际运行的墨译 1.2，拍摄于 macOS 26。1.3 新增的「峰谷调度」卡片默认折叠，其余界面与截图一致。内容使用合成示例；界面未经过重新绘制或模拟。设置页截图使用本地地址，没有公开 API 密钥。窗口左上角的紫色标识是拍摄期间的系统屏幕共享提示。
+这些截图来自实际运行的墨译 1.2，拍摄于 macOS 26。1.3 起新增的「峰谷调度」卡片默认折叠，1.4 起主面板增加了模型下拉与分段进度；其余界面与截图一致。内容使用合成示例；界面未经过重新绘制或模拟。设置页截图使用本地地址，没有公开 API 密钥。窗口左上角的紫色标识是拍摄期间的系统屏幕共享提示。
 
-These are real MoTranslate 1.2 windows captured on macOS 26, using synthetic sample text. The 1.3 峰谷调度 card is collapsed by default; the rest of the interface matches the screenshots. Screens are not mockups. Settings show a local endpoint and no API secret. The purple indicator on the settings title bar is a system screen-sharing indicator during capture.
+These are real MoTranslate 1.2 windows captured on macOS 26, using synthetic sample text. The 峰谷调度 card added in 1.3 is collapsed by default, and 1.4 added a model picker and chunk progress to the main panel; the rest of the interface matches the screenshots. Screens are not mockups. Settings show a local endpoint and no API secret. The purple indicator on the settings title bar is a system screen-sharing indicator during capture.
 
 ## 1. 输入并翻译 / Enter text and translate
 
-按 ⌥A 唤出窗口，输入或粘贴文本。自动翻译开启时停止输入约 700ms 后发起请求；手动模式下按 ⌘Return。译文完成后点击「复制译文」或按 ⌘⇧C。长文本会按 Markdown 结构分段串行翻译，代码块原样保留，面板底部显示分段进度。
+按 ⌥A 唤出窗口，输入或粘贴文本。自动翻译开启时停止输入约 700ms 后发起请求；手动模式下按 ⌘Return。译文完成后点击「复制译文」或按 ⌘⇧C。长文本会按 Markdown 结构分段串行翻译，代码块原样保留，面板底部显示分段进度和本次使用的模型。顶部的模型下拉可临时切换主接口或谷时接口；手动选择只保留到本次运行结束，点「恢复默认」或重启墨译即回到峰谷自动规则。
 
-Press ⌥A, enter or paste text, then wait for automatic translation or press ⌘Return. Use 复制译文 / ⌘⇧C to copy the result. Enter without Command inserts a new line. Long input is split along Markdown structure and translated paragraph by paragraph; code blocks are kept as-is and progress is shown below the result.
+Press ⌥A, enter or paste text, then wait for automatic translation or press ⌘Return. Use 复制译文 / ⌘⇧C to copy the result. Enter without Command inserts a new line. Long input is split along Markdown structure and translated paragraph by paragraph; code blocks are kept as-is, and the panel footer shows chunk progress plus the model used. The model menu at the top temporarily switches between the main and off-peak endpoints for this run only; choose 恢复默认 or restart the app to return to the peak/off-peak rule.
 
 ![真实中译英界面 / Actual translation window](screenshots/01-translation.png)
 

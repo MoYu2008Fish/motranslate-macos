@@ -6,6 +6,7 @@ import AppKit
 struct SettingsView: View {
     @ObservedObject var settings: AppSettings
     @ObservedObject var permissions: PermissionsModel
+    var onClose: () -> Void
 
     @State private var revealKey = false
     @State private var testState: TestState = .idle
@@ -20,6 +21,14 @@ struct SettingsView: View {
                     Text("设置自动保存，随时回到翻译。")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                 }
+                Spacer()
+                Button { onClose() } label: {
+                    Label("返回", systemImage: "chevron.left")
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .keyboardShortcut(.cancelAction)
+                .help("关闭设置并回到翻译面板")
             }.padding(.horizontal, 24).padding(.top, 20)
             TabView {
                 settingsPage { apiCard; scheduleCard }.tabItem { Label("翻译服务", systemImage: "network") }
@@ -294,7 +303,7 @@ struct SettingsView: View {
         SettingsCard(title: "关于") {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("墨译 1.3")
+                    Text("墨译 1.4")
                         .font(.system(size: 12, weight: .semibold))
                     Text("原生 SwiftUI · 常驻菜单栏 · 数据只经过你自己的接口")
                         .font(.system(size: 11))

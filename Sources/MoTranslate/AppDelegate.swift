@@ -326,7 +326,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
         if settingsWindow == nil {
             let host = NSHostingController(
-                rootView: SettingsView(settings: settings, permissions: permissions)
+                rootView: SettingsView(
+                    settings: settings,
+                    permissions: permissions,
+                    onClose: { [weak self] in self?.closeSettings() }
+                )
             )
             let window = NSWindow(contentViewController: host)
             window.title = "墨译设置"
@@ -351,6 +355,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
         guard notification.object as? NSWindow === settingsWindow else { return }
         // 关闭动画结束前 isVisible 仍为 true，下一轮再决定是否退回菜单栏模式。
         DispatchQueue.main.async { [weak self] in self?.refreshActivationPolicy() }
+    }
+
+    /// 设置里的「返回」：关闭设置并回到翻译面板。
+    private func closeSettings() {
+        settingsWindow?.close()
+        showMain()
     }
 
     // MARK: 热键
