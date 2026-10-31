@@ -170,6 +170,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(keepPanelOpen, forKey: "keepPanelOpen") }
     }
 
+    /// 长文本按 Markdown 结构分段翻译，逐段显示结果。
+    @Published var chunkingEnabled: Bool {
+        didSet { defaults.set(chunkingEnabled, forKey: "chunkingEnabled") }
+    }
+
+    /// 流式接收译文，边生成边显示。
+    @Published var streamingEnabled: Bool {
+        didSet { defaults.set(streamingEnabled, forKey: "streamingEnabled") }
+    }
+
     // MARK: 峰谷调度
 
     @Published var scheduleEnabled: Bool {
@@ -209,6 +219,8 @@ final class AppSettings: ObservableObject {
         hotKeyPreset = HotKeyPreset(rawValue: storedPreset) ?? .optionD
         autoTranslate = defaults.object(forKey: "autoTranslate") as? Bool ?? true
         fillFromClipboard = defaults.object(forKey: "fillFromClipboard") as? Bool ?? true
+        chunkingEnabled = defaults.object(forKey: "chunkingEnabled") as? Bool ?? true
+        streamingEnabled = defaults.object(forKey: "streamingEnabled") as? Bool ?? true
 
         scheduleEnabled = defaults.object(forKey: "scheduleEnabled") as? Bool ?? false
         peakStart1 = defaults.object(forKey: "peakStart1") as? Int ?? 9 * 60

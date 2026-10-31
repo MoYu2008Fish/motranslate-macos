@@ -336,6 +336,10 @@ struct SettingsView: View {
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
 
+                Toggle("流式输出（边生成边显示）", isOn: $settings.streamingEnabled)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12))
+
                 Toggle("打开面板时自动读取剪贴板", isOn: $settings.fillFromClipboard)
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
@@ -417,7 +421,7 @@ struct SettingsView: View {
         SettingsCard(title: "关于") {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("墨译 1.6")
+                    Text("墨译 1.7")
                         .font(.system(size: 12, weight: .semibold))
                     Text("原生 SwiftUI · 常驻菜单栏 · 数据只经过你自己的接口")
                         .font(.system(size: 11))

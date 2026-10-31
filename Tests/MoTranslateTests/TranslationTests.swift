@@ -50,7 +50,7 @@ import Foundation
 @MainActor @Test func editingCancelsStaleResults() async throws {
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
-    let vm = TranslateViewModel(settings: settings) { text, _, _ in
+    let vm = TranslateViewModel(settings: settings) { text, _, _, _, _ in
         // Simulate a transport that returns even after cancellation.
         try? await Task.sleep(for: .milliseconds(40))
         return TranslationResult(text: "translated " + text, sourceCode: "en", targetCode: "zh-Hans")
@@ -71,7 +71,7 @@ import Foundation
 @MainActor @Test func emptyAndMissingSelectionInvalidateWork() async throws {
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
-    let vm = TranslateViewModel(settings: settings) { _, _, _ in
+    let vm = TranslateViewModel(settings: settings) { _, _, _, _, _ in
         try? await Task.sleep(for: .milliseconds(40))
         return TranslationResult(text: "stale", sourceCode: "en", targetCode: "zh-Hans")
     }
@@ -111,7 +111,7 @@ import Foundation
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
     settings.autoTranslate = true
-    let vm = TranslateViewModel(settings: settings) { text, _, _ in
+    let vm = TranslateViewModel(settings: settings) { text, _, _, _, _ in
         try Task.checkCancellation()
         return TranslationResult(text: "translated " + text, sourceCode: "en", targetCode: "zh-Hans")
     }
@@ -226,4 +226,25 @@ import Foundation
     // 重复添加同一条预设不会产生副本。
     settings.addPreset(preset)
     #expect(settings.library.count == 3)
+}
+
+@MainActor @Test func partialOutputAppearsDuringTranslation() async throws {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    let vm = TranslateViewModel(settings: settings) { _, _, _, _, partial in
+        partial?("第一段")
+        try? await Task.sleep(for: .milliseconds(60))
+        return TranslationResult(text: "第一段第二段", sourceCode: "en", targetCode: "zh-Hans")
+    }
+    vm.input = "hello"
+    vm.startTranslation()
+
+    try await Task.sleep(for: .milliseconds(30))
+    #expect(vm.output == "第一段")
+    #expect(vm.isWorking)
+
+    try await Task.sleep(for: .milliseconds(80))
+    #expect(vm.output == "第一段第二段")
+    #expect(!vm.isWorking)
 }

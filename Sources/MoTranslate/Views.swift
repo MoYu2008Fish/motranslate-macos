@@ -62,6 +62,8 @@ struct TranslateView: View {
         .onAppear { focusInput() }
         .onChange(of: vm.focusTick) { _, _ in focusInput() }
         .onChange(of: settings.targetMode) { _, _ in vm.targetChanged() }
+        .onChange(of: settings.chunkingEnabled) { _, _ in vm.targetChanged() }
+        .onChange(of: settings.streamingEnabled) { _, _ in vm.targetChanged() }
     }
 
     private var header: some View {
@@ -205,28 +207,38 @@ struct TranslateView: View {
                 if vm.isWorking { ProgressView().controlSize(.mini) }
                 Text(vm.directionLabel).font(.system(size: 10)).foregroundStyle(.secondary)
             }
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    if let error = vm.errorText {
-                        Label(error, systemImage: "exclamationmark.circle")
-                            .font(.system(size: 13)).foregroundStyle(.orange).textSelection(.enabled)
-                        if !settings.isConfigured {
-                            Button("配置翻译接口…", action: onOpenSettings).buttonStyle(.bordered)
-                        } else { Button("重试") { vm.startTranslation() }.buttonStyle(.bordered) }
-                    } else if vm.hasOutput {
-                        Text(vm.output).font(.system(size: 16)).lineSpacing(6).textSelection(.enabled)
-                    } else {
-                        HStack(alignment: .top, spacing: 12) {
-                            Image(systemName: "text.bubble").font(.system(size: 28, weight: .ultraLight))
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(vm.isWorking ? (vm.progressText ?? "正在斟酌字句…") : "跨越语言，保留原意。")
-                                    .font(.system(size: 14))
-                                Text(vm.isWorking ? "译文即将出现在这里" : "支持中英互译与多语言识别")
-                                    .font(.system(size: 11))
-                            }
-                        }.foregroundStyle(.secondary).padding(.top, 8)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        if let error = vm.errorText {
+                            Label(error, systemImage: "exclamationmark.circle")
+                                .font(.system(size: 13)).foregroundStyle(.orange).textSelection(.enabled)
+                            if !settings.isConfigured {
+                                Button("配置翻译接口…", action: onOpenSettings).buttonStyle(.bordered)
+                            } else { Button("重试") { vm.startTranslation() }.buttonStyle(.bordered) }
+                        } else if vm.hasOutput {
+                            Text(vm.output).font(.system(size: 16)).lineSpacing(6).textSelection(.enabled)
+                        } else {
+                            HStack(alignment: .top, spacing: 12) {
+                                Image(systemName: "text.bubble").font(.system(size: 28, weight: .ultraLight))
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(vm.isWorking ? (vm.progressText ?? "正在斟酌字句…") : "跨越语言，保留原意。")
+                                        .font(.system(size: 14))
+                                    Text(vm.isWorking ? "译文即将出现在这里" : "支持中英互译与多语言识别")
+                                        .font(.system(size: 11))
+                                }
+                            }.foregroundStyle(.secondary).padding(.top, 8)
+                        }
+                        Color.clear.frame(height: 1).id("outputBottom")
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .onChange(of: vm.output) { _, _ in
+                    // 流式/分段输出时跟随到底部，方便看到最新一段。
+                    guard vm.isWorking else { return }
+                    withAnimation(.easeOut(duration: 0.12)) {
+                        proxy.scrollTo("outputBottom", anchor: .bottom)
                     }
-                }.frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             HStack(spacing: 8) {
                 if let progress = vm.progressValue {
@@ -250,6 +262,12 @@ struct TranslateView: View {
 
     private var footer: some View {
         HStack(spacing: 10) {
+            Toggle(isOn: $settings.chunkingEnabled) {
+                Text("分段").font(.system(size: 10))
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .help("长文本按 Markdown 结构逐段翻译，边译边显示")
             Text("⌥ A 唤出  ·  esc 收起").font(.system(size: 10)).foregroundStyle(.secondary)
             Spacer()
             Button { vm.copyOutput() } label: {

@@ -16,6 +16,11 @@ struct TranslationResult {
     let targetCode: String
 }
 
+struct TranslationOptions {
+    var chunking: Bool = true
+    var streaming: Bool = true
+}
+
 enum TranslationError: LocalizedError {
     case notConfigured
     case emptyInput
@@ -191,7 +196,9 @@ enum Translator {
     static func translate(
         _ text: String,
         config: TranslatorConfig,
-        onProgress: ((Int, Int) -> Void)? = nil
+        options: TranslationOptions = TranslationOptions(),
+        onProgress: ((Int, Int) -> Void)? = nil,
+        onPartial: ((String) -> Void)? = nil
     ) async throws -> TranslationResult {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw TranslationError.emptyInput }
@@ -205,39 +212,43 @@ enum Translator {
         let sourceCode = detectLanguage(trimmed)
         let targetCode = resolveTarget(sourceCode: sourceCode, mode: config.targetMode)
         let isMarkdown = TextSegmenter.looksLikeMarkdown(trimmed)
-        let chunks = TextSegmenter.chunks(from: trimmed)
+        let chunks = options.chunking
+            ? TextSegmenter.chunks(from: trimmed)
+            : [TranslationChunk(text: trimmed, trailing: "", translatable: true)]
         let translatableCount = chunks.filter(\.translatable).count
 
-        let content: String
+        var assembled = ""
         if translatableCount == 0 {
             // 整段都是代码块：没有自然语言可翻，原样返回。
-            content = trimmed
-        } else if translatableCount == 1 {
-            content = try await request(
-                url: url, text: trimmed, config: config,
-                targetCode: targetCode, isMarkdown: isMarkdown
-            )
+            assembled = trimmed
         } else {
-            var parts: [String] = []
             var completed = 0
             for chunk in chunks {
                 guard chunk.translatable else {
-                    parts.append(chunk.text + chunk.trailing)
+                    assembled += chunk.text + chunk.trailing
+                    onPartial?(assembled)
                     continue
                 }
                 completed += 1
                 onProgress?(completed, translatableCount)
+
+                let prefix = assembled
+                let trailing = chunk.trailing
                 let translated = try await request(
                     url: url, text: chunk.text, config: config,
-                    targetCode: targetCode, isMarkdown: isMarkdown
+                    targetCode: targetCode, isMarkdown: isMarkdown,
+                    streaming: options.streaming,
+                    onDelta: onPartial == nil ? nil : { partial in
+                        onPartial?(prefix + partial + trailing)
+                    }
                 )
-                parts.append(translated + chunk.trailing)
+                assembled = prefix + translated + trailing
+                onPartial?(assembled)
             }
-            content = parts.joined()
         }
 
         return TranslationResult(
-            text: cleanup(content),
+            text: cleanup(assembled),
             sourceCode: sourceCode,
             targetCode: targetCode
         )
@@ -248,7 +259,9 @@ enum Translator {
         text: String,
         config: TranslatorConfig,
         targetCode: String,
-        isMarkdown: Bool
+        isMarkdown: Bool,
+        streaming: Bool,
+        onDelta: ((String) -> Void)?
     ) async throws -> String {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -263,7 +276,7 @@ enum Translator {
         let body: [String: Any] = [
             "model": config.model,
             "temperature": 0.2,
-            "stream": false,
+            "stream": streaming,
             "messages": [
                 ["role": "system", "content": systemPrompt(targetCode: targetCode, isMarkdown: isMarkdown)],
                 ["role": "user", "content": text]
@@ -271,6 +284,13 @@ enum Translator {
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
 
+        if streaming {
+            return try await streamedContent(for: request, onDelta: onDelta)
+        }
+        return try await completeContent(for: request)
+    }
+
+    private static func completeContent(for request: URLRequest) async throws -> String {
         let data: Data
         let response: URLResponse
         do {
@@ -289,6 +309,62 @@ enum Translator {
         }
 
         return try parseContent(from: data)
+    }
+
+    /// 逐块读取 SSE；若服务商忽略 stream 参数返回普通 JSON，也能兼容。
+    private static func streamedContent(
+        for request: URLRequest,
+        onDelta: ((String) -> Void)?
+    ) async throws -> String {
+        let bytes: URLSession.AsyncBytes
+        let response: URLResponse
+        do {
+            (bytes, response) = try await URLSession.shared.bytes(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            throw TranslationError.network(error.localizedDescription)
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw TranslationError.malformed
+        }
+
+        if !(200..<300).contains(http.statusCode) {
+            var data = Data()
+            for try await byte in bytes { data.append(byte) }
+            throw TranslationError.http(http.statusCode, errorMessage(from: data))
+        }
+
+        let contentType = http.value(forHTTPHeaderField: "Content-Type") ?? ""
+        guard contentType.contains("text/event-stream") else {
+            var data = Data()
+            for try await byte in bytes { data.append(byte) }
+            let content = try parseContent(from: data)
+            onDelta?(content)
+            return content
+        }
+
+        var content = ""
+        for try await rawLine in bytes.lines {
+            // 兼容 \r\n 结尾与个别实现的行首空格。
+            let line = rawLine.trimmingCharacters(in: .whitespaces)
+            guard line.hasPrefix("data:") else { continue }
+            let payload = String(line.dropFirst(5)).trimmingCharacters(in: .whitespacesAndNewlines)
+            if payload == "[DONE]" { break }
+            guard let data = payload.data(using: .utf8),
+                  let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let choices = object["choices"] as? [[String: Any]],
+                  let delta = choices.first?["delta"] as? [String: Any],
+                  let piece = delta["content"] as? String,
+                  !piece.isEmpty
+            else { continue }
+            content += piece
+            onDelta?(content)
+        }
+
+        guard !content.isEmpty else { throw TranslationError.malformed }
+        return content
     }
 
     /// 提示词用目标语言书写，并明确混合文本的处理方式，避免模型以“已经是目标语言”为由整段跳过。

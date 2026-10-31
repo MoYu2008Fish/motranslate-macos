@@ -30,10 +30,10 @@ final class TranslateViewModel: ObservableObject {
     private var debounceTask: Task<Void, Never>?
     private var generation = 0
 
-    private let translate: (String, TranslatorConfig, ((Int, Int) -> Void)?) async throws -> TranslationResult
+    private let translate: (String, TranslatorConfig, TranslationOptions, ((Int, Int) -> Void)?, ((String) -> Void)?) async throws -> TranslationResult
 
     init(settings: AppSettings,
-         translate: @escaping (String, TranslatorConfig, ((Int, Int) -> Void)?) async throws -> TranslationResult = Translator.translate) {
+         translate: @escaping (String, TranslatorConfig, TranslationOptions, ((Int, Int) -> Void)?, ((String) -> Void)?) async throws -> TranslationResult = Translator.translate) {
         self.settings = settings
         self.translate = translate
     }
@@ -90,32 +90,41 @@ final class TranslateViewModel: ObservableObject {
         isWorking = true
 
         let config = settings.config
+        let options = TranslationOptions(
+            chunking: settings.chunkingEnabled,
+            streaming: settings.streamingEnabled
+        )
         activeModelLabel = config.model
         currentTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let result = try await self.translate(text, config) { [weak self] current, total in
+                let result = try await self.translate(text, config, options, { [weak self] current, total in
                     DispatchQueue.main.async {
                         guard let self, currentGeneration == self.generation else { return }
                         self.progressText = "正在翻译 \(current)/\(total) 段"
                         self.progressValue = total > 0 ? Double(current) / Double(total) : nil
                     }
-                }
+                }, { [weak self] partial in
+                    DispatchQueue.main.async {
+                        guard let self, currentGeneration == self.generation, self.isWorking else { return }
+                        self.output = partial
+                    }
+                })
                 guard !Task.isCancelled, currentGeneration == self.generation else { return }
+                self.isWorking = false
                 self.output = result.text
                 self.sourceLabel = Translator.displayName(result.sourceCode)
                 self.targetLabel = Translator.displayName(result.targetCode)
                 self.progressText = nil
                 self.progressValue = nil
-                self.isWorking = false
             } catch is CancellationError {
                 // 被新请求取代，保持新请求的状态
             } catch {
                 guard !Task.isCancelled, currentGeneration == self.generation else { return }
+                self.isWorking = false
                 self.progressText = nil
                 self.progressValue = nil
                 self.errorText = error.localizedDescription
-                self.isWorking = false
             }
         }
     }
