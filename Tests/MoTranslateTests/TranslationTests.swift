@@ -46,7 +46,7 @@ import Foundation
 @MainActor @Test func editingCancelsStaleResults() async throws {
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
-    let vm = TranslateViewModel(settings: settings) { text, _ in
+    let vm = TranslateViewModel(settings: settings) { text, _, _ in
         // Simulate a transport that returns even after cancellation.
         try? await Task.sleep(for: .milliseconds(40))
         return TranslationResult(text: "translated " + text, sourceCode: "en", targetCode: "zh-Hans")
@@ -67,7 +67,7 @@ import Foundation
 @MainActor @Test func emptyAndMissingSelectionInvalidateWork() async throws {
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
-    let vm = TranslateViewModel(settings: settings) { _, _ in
+    let vm = TranslateViewModel(settings: settings) { _, _, _ in
         try? await Task.sleep(for: .milliseconds(40))
         return TranslationResult(text: "stale", sourceCode: "en", targetCode: "zh-Hans")
     }
@@ -107,7 +107,7 @@ import Foundation
     let (settings, defaults, name) = fixture()
     defer { defaults.removePersistentDomain(forName: name) }
     settings.autoTranslate = true
-    let vm = TranslateViewModel(settings: settings) { text, _ in
+    let vm = TranslateViewModel(settings: settings) { text, _, _ in
         try Task.checkCancellation()
         return TranslationResult(text: "translated " + text, sourceCode: "en", targetCode: "zh-Hans")
     }
@@ -116,4 +116,45 @@ import Foundation
     try await Task.sleep(for: .milliseconds(850))
     #expect(vm.output == "translated hello")
     #expect(!vm.isWorking)
+}
+
+@Test func splitsLongTextAndKeepsCodeBlocks() {
+    let paragraph = String(repeating: "这是一段用于测试分段的文字。", count: 120)
+    let text = "# 标题\n\n\(paragraph)\n\n```swift\nlet value = 1\n```\n\n结尾段落。"
+    let chunks = TextSegmenter.chunks(from: text, maxCharacters: 1200)
+
+    #expect(chunks.count > 1)
+    #expect(chunks.contains { !$0.translatable && $0.text.contains("let value = 1") })
+    // 分段不丢字符，拼接后能还原原文。
+    #expect(chunks.map { $0.text + $0.trailing }.joined() == text)
+}
+
+@Test func detectsMarkdownStructures() {
+    #expect(TextSegmenter.looksLikeMarkdown("# 标题\n\n正文。"))
+    #expect(TextSegmenter.looksLikeMarkdown("示例：\n\n```js\nconsole.log(1)\n```"))
+    #expect(TextSegmenter.looksLikeMarkdown("- 第一项\n- 第二项\n- 第三项"))
+    #expect(TextSegmenter.looksLikeMarkdown("| A | B |\n| --- | --- |\n| 1 | 2 |"))
+    #expect(!TextSegmenter.looksLikeMarkdown("这是一段普通的中文文本，没有任何标记。"))
+}
+
+@MainActor @Test func scheduleSwitchesTierByWeekdayAndHour() {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    settings.peakStart1 = 9 * 60
+    settings.peakEnd1 = 12 * 60
+    settings.peakStart2 = 14 * 60
+    settings.peakEnd2 = 18 * 60
+    settings.weekendIsOffPeak = true
+
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "Asia/Shanghai")!
+
+    let thursdayMorning = calendar.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: 10))!
+    let thursdayLunch = calendar.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: 13))!
+    let saturdayMorning = calendar.date(from: DateComponents(year: 2026, month: 10, day: 31, hour: 10))!
+
+    #expect(settings.currentTier(at: thursdayMorning, calendar: calendar) == .peak)
+    #expect(settings.currentTier(at: thursdayLunch, calendar: calendar) == .offPeak)
+    #expect(settings.currentTier(at: saturdayMorning, calendar: calendar) == .offPeak)
 }

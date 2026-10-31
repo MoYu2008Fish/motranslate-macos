@@ -2,15 +2,15 @@
 
 [中文说明](../README.zh-CN.md) · [English](../README.md) · [日本語](../README.ja.md)
 
-这些截图来自实际运行的墨译 1.2，拍摄于 macOS 26。内容使用合成示例；界面未经过重新绘制或模拟。设置页截图使用本地地址，没有公开 API 密钥。窗口左上角的紫色标识是拍摄期间的系统屏幕共享提示。
+这些截图来自实际运行的墨译 1.2，拍摄于 macOS 26。1.3 新增的「峰谷调度」卡片默认折叠，其余界面与截图一致。内容使用合成示例；界面未经过重新绘制或模拟。设置页截图使用本地地址，没有公开 API 密钥。窗口左上角的紫色标识是拍摄期间的系统屏幕共享提示。
 
-These are real MoTranslate 1.2 windows captured on macOS 26, using synthetic sample text. Screens are not mockups. Settings show a local endpoint and no API secret. The purple indicator on the settings title bar is a system screen-sharing indicator during capture.
+These are real MoTranslate 1.2 windows captured on macOS 26, using synthetic sample text. The 1.3 峰谷调度 card is collapsed by default; the rest of the interface matches the screenshots. Screens are not mockups. Settings show a local endpoint and no API secret. The purple indicator on the settings title bar is a system screen-sharing indicator during capture.
 
 ## 1. 输入并翻译 / Enter text and translate
 
-按 ⌥A 唤出窗口，输入或粘贴文本。自动翻译开启时停止输入约 700ms 后发起请求；手动模式下按 ⌘Return。译文完成后点击「复制译文」或按 ⌘⇧C。
+按 ⌥A 唤出窗口，输入或粘贴文本。自动翻译开启时停止输入约 700ms 后发起请求；手动模式下按 ⌘Return。译文完成后点击「复制译文」或按 ⌘⇧C。长文本会按 Markdown 结构分段串行翻译，代码块原样保留，面板底部显示分段进度。
 
-Press ⌥A, enter or paste text, then wait for automatic translation or press ⌘Return. Use 复制译文 / ⌘⇧C to copy the result. Enter without Command inserts a new line.
+Press ⌥A, enter or paste text, then wait for automatic translation or press ⌘Return. Use 复制译文 / ⌘⇧C to copy the result. Enter without Command inserts a new line. Long input is split along Markdown structure and translated paragraph by paragraph; code blocks are kept as-is and progress is shown below the result.
 
 ![真实中译英界面 / Actual translation window](screenshots/01-translation.png)
 
@@ -19,6 +19,10 @@ Press ⌥A, enter or paste text, then wait for automatic translation or press �
 按 ⌘, 打开「翻译服务」。本地 Ollama 地址通常填写 `http://localhost:11434/v1`，密钥留空。模型名称必须与 `ollama list` 的实际输出一致；截图中的 `qwen3-4b` 是本机别名。点击「测试连接」会向配置的接口发送一条合成英文测试句。
 
 Press ⌘, and open 翻译服务. For local Ollama, enter `http://localhost:11434/v1`, leave API Key empty, and use an exact installed tag from `ollama list`. The screenshot's `qwen3-4b` is a local alias. 测试连接 sends a synthetic English test sentence to the configured endpoint.
+
+截图下方还有「峰谷调度」：默认关闭。开启后，高峰时段使用上面的主接口，其余时间改用谷时接口；高峰时段和周末规则可编辑，按本机时区判断。中国法定节假日无法自动识别，需要时请临时关闭调度。DeepSeek 官方高峰为工作日 9:00–12:00、14:00–18:00。
+
+The 峰谷调度 card below the screenshot is off by default. When enabled, peak hours use the main endpoint above and other hours use the off-peak endpoint. Peak windows and weekend handling are editable and evaluated in the local time zone. Chinese statutory holidays are not detected automatically; disable the schedule for those days if needed. DeepSeek's official peak hours are weekdays 9:00–12:00 and 14:00–18:00 Beijing time.
 
 ![实际模型配置 / Actual local-model configuration](screenshots/03-local-model-settings.png)
 

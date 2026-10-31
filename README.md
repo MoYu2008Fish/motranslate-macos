@@ -21,6 +21,8 @@ A lightweight **Mac menu-bar translator** built with SwiftUI and AppKit. Transla
 - **Your endpoint, your model:** configurable Base URL, model name, and Keychain-backed API key. Provider presets include Ollama, OpenAI, DeepSeek, and SiliconFlow; availability depends on your provider and model.
 - **Simple deployment:** one command builds, backs up the previous installation, creates a desktop Finder alias, pins one Dock entry, and launches the app.
 - **Predictable request state:** 700 ms automatic-translation debounce, cancel / retry actions, and stale-result invalidation when text or target language changes.
+- **Long text in chunks, Markdown aware:** long input is split along Markdown structure, code blocks are left untouched, and paragraphs are translated serially with progress shown in the panel. Small local models keep their context and finish faster.
+- **Peak / off-peak model switching (off by default):** optionally use your local model during peak hours and a cloud model off-peak. Peak windows and weekend handling are editable. MoTranslate only follows the clock rules you configure; check your provider's own pricing schedule.
 
 ## Install
 

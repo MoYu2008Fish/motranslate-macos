@@ -184,7 +184,12 @@ enum Translator {
         return URL(string: value + "/v1/chat/completions")
     }
 
-    static func translate(_ text: String, config: TranslatorConfig) async throws -> TranslationResult {
+    /// 长文本会自动按 Markdown 结构分段串行翻译，`onProgress` 报告 (已完成, 总段数)。
+    static func translate(
+        _ text: String,
+        config: TranslatorConfig,
+        onProgress: ((Int, Int) -> Void)? = nil
+    ) async throws -> TranslationResult {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw TranslationError.emptyInput }
         guard config.baseURL.trimmingCharacters(in: .whitespaces).isEmpty == false,
@@ -196,7 +201,52 @@ enum Translator {
 
         let sourceCode = detectLanguage(trimmed)
         let targetCode = resolveTarget(sourceCode: sourceCode, mode: config.targetMode)
+        let isMarkdown = TextSegmenter.looksLikeMarkdown(trimmed)
+        let chunks = TextSegmenter.chunks(from: trimmed)
+        let translatableCount = chunks.filter(\.translatable).count
 
+        let content: String
+        if translatableCount == 0 {
+            // 整段都是代码块：没有自然语言可翻，原样返回。
+            content = trimmed
+        } else if translatableCount == 1 {
+            content = try await request(
+                url: url, text: trimmed, config: config,
+                targetCode: targetCode, isMarkdown: isMarkdown
+            )
+        } else {
+            var parts: [String] = []
+            var completed = 0
+            for chunk in chunks {
+                guard chunk.translatable else {
+                    parts.append(chunk.text + chunk.trailing)
+                    continue
+                }
+                completed += 1
+                onProgress?(completed, translatableCount)
+                let translated = try await request(
+                    url: url, text: chunk.text, config: config,
+                    targetCode: targetCode, isMarkdown: isMarkdown
+                )
+                parts.append(translated + chunk.trailing)
+            }
+            content = parts.joined()
+        }
+
+        return TranslationResult(
+            text: cleanup(content),
+            sourceCode: sourceCode,
+            targetCode: targetCode
+        )
+    }
+
+    private static func request(
+        url: URL,
+        text: String,
+        config: TranslatorConfig,
+        targetCode: String,
+        isMarkdown: Bool
+    ) async throws -> String {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         // 本地大模型的首次加载和推理可能较慢；仍可从面板随时取消。
@@ -212,8 +262,8 @@ enum Translator {
             "temperature": 0.2,
             "stream": false,
             "messages": [
-                ["role": "system", "content": systemPrompt(targetCode: targetCode)],
-                ["role": "user", "content": trimmed]
+                ["role": "system", "content": systemPrompt(targetCode: targetCode, isMarkdown: isMarkdown)],
+                ["role": "user", "content": text]
             ]
         ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -235,16 +285,11 @@ enum Translator {
             throw TranslationError.http(http.statusCode, errorMessage(from: data))
         }
 
-        let content = try parseContent(from: data)
-        return TranslationResult(
-            text: cleanup(content),
-            sourceCode: sourceCode,
-            targetCode: targetCode
-        )
+        return try parseContent(from: data)
     }
 
     /// 提示词用目标语言书写，并明确混合文本的处理方式，避免模型以“已经是目标语言”为由整段跳过。
-    private static func systemPrompt(targetCode: String) -> String {
+    private static func systemPrompt(targetCode: String, isMarkdown: Bool) -> String {
         if targetCode.hasPrefix("zh") {
             return """
             你是一名专业翻译。把用户提供的文本翻译成地道的简体中文。
@@ -256,6 +301,7 @@ enum Translator {
             4. 代码、变量名、命令、文件路径、URL、邮箱、专有名词和产品名保持原样，不翻译。
             5. 译文必须全部是中文，不要残留成句的英文；只有代码、专有名词这类内容允许保留原文。
             6. 只有当输入整段都已经是中文时，才原样返回，不要改写。
+            \(isMarkdown ? "7. 输入包含 Markdown：保留标题、列表、引用、表格、链接和强调等语法标记，只翻译其中的自然语言；代码块与行内代码原样保留。" : "")
             """
         }
         return """
@@ -268,6 +314,7 @@ enum Translator {
         4. Keep code, variable names, commands, file paths, URLs, emails, proper nouns and product names unchanged.
         5. The whole output must be in English. No sentence may be left in another language, except code, proper nouns and the like.
         6. Only when the input is already entirely English, return it unchanged.
+        \(isMarkdown ? "7. The input is Markdown: keep headings, lists, quotes, tables, links and emphasis markers intact, translate only the natural language, and leave code blocks and inline code unchanged." : "")
         """
     }
 

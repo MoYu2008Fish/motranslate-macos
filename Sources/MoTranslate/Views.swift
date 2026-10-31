@@ -163,7 +163,7 @@ struct TranslateView: View {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "text.bubble").font(.system(size: 28, weight: .ultraLight))
                             VStack(alignment: .leading, spacing: 6) {
-                                Text(vm.isWorking ? "正在斟酌字句…" : "跨越语言，保留原意。")
+                                Text(vm.isWorking ? (vm.progressText ?? "正在斟酌字句…") : "跨越语言，保留原意。")
                                     .font(.system(size: 14))
                                 Text(vm.isWorking ? "译文即将出现在这里" : "支持中英互译与多语言识别")
                                     .font(.system(size: 11))
@@ -173,7 +173,7 @@ struct TranslateView: View {
                 }.frame(maxWidth: .infinity, alignment: .leading)
             }
             HStack {
-                Text(vm.isWorking ? "正在翻译" : vm.errorText != nil ? "翻译未完成" : vm.hasOutput ? "翻译完成" : "等待输入")
+                Text(vm.progressText ?? (vm.isWorking ? "正在翻译" : vm.errorText != nil ? "翻译未完成" : vm.hasOutput ? "翻译完成" : "等待输入"))
                 Spacer()
                 Button { vm.useOutputAsInput(); focusInput() } label: {
                     Label("用作原文", systemImage: "arrow.uturn.backward")

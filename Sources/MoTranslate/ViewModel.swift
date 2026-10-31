@@ -11,6 +11,7 @@ final class TranslateViewModel: ObservableObject {
     @Published var errorText: String?
     @Published var sourceLabel = ""
     @Published var targetLabel = ""
+    @Published var progressText: String?
     @Published var copied = false
     @Published var replaced = false
     @Published var focusTick = 0
@@ -27,10 +28,10 @@ final class TranslateViewModel: ObservableObject {
     private var debounceTask: Task<Void, Never>?
     private var generation = 0
 
-    private let translate: (String, TranslatorConfig) async throws -> TranslationResult
+    private let translate: (String, TranslatorConfig, ((Int, Int) -> Void)?) async throws -> TranslationResult
 
     init(settings: AppSettings,
-         translate: @escaping (String, TranslatorConfig) async throws -> TranslationResult = Translator.translate) {
+         translate: @escaping (String, TranslatorConfig, ((Int, Int) -> Void)?) async throws -> TranslationResult = Translator.translate) {
         self.settings = settings
         self.translate = translate
     }
@@ -82,22 +83,30 @@ final class TranslateViewModel: ObservableObject {
         output = ""
         copied = false
         replaced = false
+        progressText = nil
         isWorking = true
 
         let config = settings.config
         currentTask = Task { [weak self] in
             guard let self else { return }
             do {
-                let result = try await self.translate(text, config)
+                let result = try await self.translate(text, config) { [weak self] current, total in
+                    DispatchQueue.main.async {
+                        guard let self, currentGeneration == self.generation else { return }
+                        self.progressText = "正在翻译 \(current)/\(total) 段"
+                    }
+                }
                 guard !Task.isCancelled, currentGeneration == self.generation else { return }
                 self.output = result.text
                 self.sourceLabel = Translator.displayName(result.sourceCode)
                 self.targetLabel = Translator.displayName(result.targetCode)
+                self.progressText = nil
                 self.isWorking = false
             } catch is CancellationError {
                 // 被新请求取代，保持新请求的状态
             } catch {
                 guard !Task.isCancelled, currentGeneration == self.generation else { return }
+                self.progressText = nil
                 self.errorText = error.localizedDescription
                 self.isWorking = false
             }
@@ -108,6 +117,7 @@ final class TranslateViewModel: ObservableObject {
         generation += 1
         currentTask?.cancel()
         debounceTask?.cancel()
+        progressText = nil
         isWorking = false
     }
 
@@ -185,6 +195,7 @@ final class TranslateViewModel: ObservableObject {
         input = ""
         output = ""
         isWorking = false
+        progressText = nil
         replaced = false
         errorText = "没有检测到选中的文字。先选中内容，再按快捷键。"
     }
@@ -198,6 +209,7 @@ final class TranslateViewModel: ObservableObject {
         errorText = nil
         sourceLabel = ""
         targetLabel = ""
+        progressText = nil
         isWorking = false
         copied = false
         replaced = false

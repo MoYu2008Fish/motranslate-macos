@@ -4,7 +4,7 @@ import Combine
 import Carbon.HIToolbox
 
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
 
     private let settings = AppSettings()
     private lazy var permissions = PermissionsModel()
@@ -189,17 +189,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showMain() {
         hidePopup()
         mainVM.fillFromClipboardIfNeeded()
+        // 先切到 regular，Dock 才会把本应用显示为运行中，并能从 Dock 直接退出。
+        NSApp.setActivationPolicy(.regular)
         mainController.showCentered()
         mainVM.requestFocus()
         installMainOutsideMonitor()
     }
 
-    private func hideMain() {
+    private func hideMain(refreshPolicy: Bool = true) {
         mainController.hide()
         if let mainOutsideMonitor {
             NSEvent.removeMonitor(mainOutsideMonitor)
             self.mainOutsideMonitor = nil
         }
+        if refreshPolicy { refreshActivationPolicy() }
+    }
+
+    /// 主面板或设置窗口可见时使用 regular（Dock 图标带运行状态、可退出）；
+    /// 全部收起后回到 accessory，保留菜单栏常驻而不长期占用 Dock。
+    private func refreshActivationPolicy() {
+        let hasWindow = mainController?.panel.isVisible == true
+            || settingsWindow?.isVisible == true
+        let policy: NSApplication.ActivationPolicy = hasWindow ? .regular : .accessory
+        guard NSApp.activationPolicy() != policy else { return }
+        NSApp.setActivationPolicy(policy)
     }
 
     /// 点击主面板外部时关闭
@@ -309,7 +322,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func openSettings() {
         hidePopup()
-        hideMain()
+        hideMain(refreshPolicy: false)
 
         if settingsWindow == nil {
             let host = NSHostingController(
@@ -324,11 +337,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.minSize = NSSize(width: 560, height: 500)
             window.center()
             window.isReleasedWhenClosed = false
+            window.delegate = self
             settingsWindow = window
         }
 
+        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         settingsWindow?.makeKeyAndOrderFront(nil)
+        refreshActivationPolicy()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === settingsWindow else { return }
+        // 关闭动画结束前 isVisible 仍为 true，下一轮再决定是否退回菜单栏模式。
+        DispatchQueue.main.async { [weak self] in self?.refreshActivationPolicy() }
     }
 
     // MARK: 热键

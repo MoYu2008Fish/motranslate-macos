@@ -22,7 +22,7 @@ struct SettingsView: View {
                 }
             }.padding(.horizontal, 24).padding(.top, 20)
             TabView {
-                settingsPage { apiCard }.tabItem { Label("翻译服务", systemImage: "network") }
+                settingsPage { apiCard; scheduleCard }.tabItem { Label("翻译服务", systemImage: "network") }
                 settingsPage { behaviorCard; selectionCard }.tabItem { Label("通用与快捷键", systemImage: "keyboard") }
                 settingsPage { aboutCard }.tabItem { Label("关于墨译", systemImage: "info.circle") }
             }.padding(.horizontal, 16).padding(.bottom, 16)
@@ -107,6 +107,86 @@ struct SettingsView: View {
                 .foregroundStyle(.red)
                 .textSelection(.enabled)
         }
+    }
+
+    // MARK: 峰谷调度
+
+    private var scheduleCard: some View {
+        SettingsCard(title: "峰谷调度") {
+            VStack(alignment: .leading, spacing: 12) {
+                Toggle("按时间段切换模型（默认关闭）", isOn: $settings.scheduleEnabled)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12))
+
+                Text("高峰时段使用上面的主接口，其余时间改用下面的谷时接口。可以把云端模型留给闲时、本地模型留给高峰。")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+
+                if settings.scheduleEnabled {
+                    HStack(spacing: 8) {
+                        Text("高峰时段")
+                            .font(.system(size: 12))
+                            .frame(width: 78, alignment: .leading)
+                        timeField(\.peakStart1)
+                        Text("–").foregroundStyle(.secondary)
+                        timeField(\.peakEnd1)
+                        Text("、").foregroundStyle(.secondary)
+                        timeField(\.peakStart2)
+                        Text("–").foregroundStyle(.secondary)
+                        timeField(\.peakEnd2)
+                        Spacer()
+                    }
+
+                    Toggle("周末全天按空闲时段", isOn: $settings.weekendIsOffPeak)
+                        .toggleStyle(.checkbox)
+                        .font(.system(size: 12))
+
+                    Divider().opacity(0.5)
+
+                    Text("谷时接口")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.secondary)
+
+                    labeledField("Base URL", text: $settings.offPeakBaseURL,
+                                 placeholder: "https://api.deepseek.com/v1")
+                    labeledField("API Key", text: $settings.offPeakAPIKey,
+                                 placeholder: "sk-…（本地模型可留空）", secure: !revealKey)
+                    labeledField("模型", text: $settings.offPeakModel,
+                                 placeholder: "deepseek-chat")
+
+                    Text("当前生效：\(settings.activeTierSummary)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+
+                    Text("按本机时区判断；中国法定节假日无法自动识别，需要时请临时关闭调度。DeepSeek 官方高峰为工作日 9:00–12:00、14:00–18:00。")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+    }
+
+    private func timeField(_ keyPath: ReferenceWritableKeyPath<AppSettings, Int>) -> some View {
+        DatePicker("", selection: timeBinding(keyPath), displayedComponents: .hourAndMinute)
+            .labelsHidden()
+            .datePickerStyle(.field)
+            .frame(width: 82)
+    }
+
+    private func timeBinding(_ keyPath: ReferenceWritableKeyPath<AppSettings, Int>) -> Binding<Date> {
+        Binding(
+            get: {
+                let minutes = settings[keyPath: keyPath]
+                var components = DateComponents()
+                components.hour = minutes / 60
+                components.minute = minutes % 60
+                return Calendar.current.date(from: components) ?? Date()
+            },
+            set: { date in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+                settings[keyPath: keyPath] = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+            }
+        )
     }
 
     // MARK: 翻译行为
@@ -214,7 +294,7 @@ struct SettingsView: View {
         SettingsCard(title: "关于") {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("墨译 1.2")
+                    Text("墨译 1.3")
                         .font(.system(size: 12, weight: .semibold))
                     Text("原生 SwiftUI · 常驻菜单栏 · 数据只经过你自己的接口")
                         .font(.system(size: 11))
