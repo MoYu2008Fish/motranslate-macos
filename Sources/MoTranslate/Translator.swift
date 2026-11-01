@@ -412,6 +412,8 @@ enum Translator {
                 return "风格要求：严谨。忠实对应原文结构与术语，数字、单位、限定词不增删，避免口语化和自由发挥。"
             case .plain:
                 return "风格要求：大白话。用日常口语表达，拆开长句、少用术语；必须保留术语时用常见说法解释，但不改变原意。"
+            case .colloquial:
+                return "风格要求：口语。像当面聊天一样表达，用短句和日常说法，可以带自然的语气词；不要书面腔，但不要添加原文没有的信息。"
             case .concise:
                 return "风格要求：精简并总结。先给出压缩冗余后的简洁译文，再另起一行以「总结：」开头，用一句话概括核心内容。"
             case .natural:
@@ -423,6 +425,8 @@ enum Translator {
             return "Style: precise. Stay faithful to the source structure and terminology; keep numbers, units and qualifiers exact; avoid colloquialisms and free interpretation."
         case .plain:
             return "Style: plain language. Use everyday wording, split long sentences and avoid jargon; explain a required term in common words without changing the meaning."
+        case .colloquial:
+            return "Style: conversational. Sound like everyday speech with short sentences and natural fillers; avoid a written tone without adding information that is not in the source."
         case .concise:
             return "Style: concise with a summary. Give a tightened translation first, then on a new line start with \"Summary:\" and condense the core meaning into one sentence."
         case .natural:

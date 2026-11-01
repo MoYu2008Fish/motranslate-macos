@@ -74,6 +74,7 @@ enum TranslationStyle: String, CaseIterable, Identifiable {
     case natural
     case precise
     case plain
+    case colloquial
     case concise
 
     var id: String { rawValue }
@@ -83,6 +84,7 @@ enum TranslationStyle: String, CaseIterable, Identifiable {
         case .natural: return "自然"
         case .precise: return "严谨"
         case .plain: return "大白话"
+        case .colloquial: return "口语"
         case .concise: return "精简 + 总结"
         }
     }

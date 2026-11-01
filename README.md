@@ -22,7 +22,7 @@ A lightweight **Mac menu-bar translator** built with SwiftUI and AppKit. Transla
 - **Simple deployment:** one command builds, backs up the previous installation, creates a desktop Finder alias, pins one Dock entry, and launches the app.
 - **Predictable request state:** 700 ms automatic-translation debounce, cancel / retry actions, and stale-result invalidation when text or target language changes.
 - **Long text in chunks, Markdown rendered:** long input is split along Markdown structure, code blocks are left untouched, and paragraphs are translated serially. The result view renders headings, bold, italics, lists, quotes and code blocks instead of showing `**` markers. Toggle chunking in the panel at any time. Streaming is on by default and can be turned off for endpoints that do not support it. Markdown detection is on by default and can be disabled in Settings.
-- **Translation style:** natural, precise, plain language, or concise with a summary. Switch directly in the panel and the text is re-translated.
+- **Translation style:** natural, precise, plain language, conversational, or concise with a summary. Switch directly in the panel and the text is re-translated.
 - **Peak / off-peak model switching (off by default):** optionally use your local model during peak hours and a cloud model off-peak. Peak windows and weekend handling are editable. MoTranslate only follows the clock rules you configure; check your provider's own pricing schedule.
 
 ## Install
