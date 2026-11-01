@@ -19,6 +19,8 @@ struct TranslationResult {
 struct TranslationOptions {
     var chunking: Bool = true
     var streaming: Bool = true
+    var markdown: Bool = true
+    var style: TranslationStyle = .natural
 }
 
 enum TranslationError: LocalizedError {
@@ -211,7 +213,7 @@ enum Translator {
 
         let sourceCode = detectLanguage(trimmed)
         let targetCode = resolveTarget(sourceCode: sourceCode, mode: config.targetMode)
-        let isMarkdown = TextSegmenter.looksLikeMarkdown(trimmed)
+        let isMarkdown = options.markdown && TextSegmenter.looksLikeMarkdown(trimmed)
         let chunks = options.chunking
             ? TextSegmenter.chunks(from: trimmed)
             : [TranslationChunk(text: trimmed, trailing: "", translatable: true)]
@@ -237,6 +239,7 @@ enum Translator {
                 let translated = try await request(
                     url: url, text: chunk.text, config: config,
                     targetCode: targetCode, isMarkdown: isMarkdown,
+                    style: options.style,
                     streaming: options.streaming,
                     onDelta: onPartial == nil ? nil : { partial in
                         onPartial?(prefix + partial + trailing)
@@ -260,6 +263,7 @@ enum Translator {
         config: TranslatorConfig,
         targetCode: String,
         isMarkdown: Bool,
+        style: TranslationStyle,
         streaming: Bool,
         onDelta: ((String) -> Void)?
     ) async throws -> String {
@@ -278,7 +282,7 @@ enum Translator {
             "temperature": 0.2,
             "stream": streaming,
             "messages": [
-                ["role": "system", "content": systemPrompt(targetCode: targetCode, isMarkdown: isMarkdown)],
+                ["role": "system", "content": systemPrompt(targetCode: targetCode, isMarkdown: isMarkdown, style: style)],
                 ["role": "user", "content": text]
             ]
         ]
@@ -368,7 +372,10 @@ enum Translator {
     }
 
     /// 提示词用目标语言书写，并明确混合文本的处理方式，避免模型以“已经是目标语言”为由整段跳过。
-    private static func systemPrompt(targetCode: String, isMarkdown: Bool) -> String {
+    private static func systemPrompt(targetCode: String, isMarkdown: Bool, style: TranslationStyle) -> String {
+        let styleRuleText = styleRule(style, chinese: targetCode.hasPrefix("zh"))
+        let styleBlock = styleRuleText.isEmpty ? "" : "\n\n" + styleRuleText
+
         if targetCode.hasPrefix("zh") {
             return """
             你是一名专业翻译。把用户提供的文本翻译成地道的简体中文。
@@ -380,7 +387,7 @@ enum Translator {
             4. 代码、变量名、命令、文件路径、URL、邮箱、专有名词和产品名保持原样，不翻译。
             5. 译文必须全部是中文，不要残留成句的英文；只有代码、专有名词这类内容允许保留原文。
             6. 只有当输入整段都已经是中文时，才原样返回，不要改写。
-            \(isMarkdown ? "7. 输入包含 Markdown：保留标题、列表、引用、表格、链接和强调等语法标记，只翻译其中的自然语言；代码块与行内代码原样保留。" : "")
+            \(isMarkdown ? "7. 输入包含 Markdown：保留标题、列表、引用、表格、链接和强调等语法标记，只翻译其中的自然语言；代码块与行内代码原样保留。" : "")\(styleBlock)
             """
         }
         return """
@@ -393,8 +400,34 @@ enum Translator {
         4. Keep code, variable names, commands, file paths, URLs, emails, proper nouns and product names unchanged.
         5. The whole output must be in English. No sentence may be left in another language, except code, proper nouns and the like.
         6. Only when the input is already entirely English, return it unchanged.
-        \(isMarkdown ? "7. The input is Markdown: keep headings, lists, quotes, tables, links and emphasis markers intact, translate only the natural language, and leave code blocks and inline code unchanged." : "")
+        \(isMarkdown ? "7. The input is Markdown: keep headings, lists, quotes, tables, links and emphasis markers intact, translate only the natural language, and leave code blocks and inline code unchanged." : "")\(styleBlock)
         """
+    }
+
+    private static func styleRule(_ style: TranslationStyle, chinese: Bool) -> String {
+        guard style != .natural else { return "" }
+        if chinese {
+            switch style {
+            case .precise:
+                return "风格要求：严谨。忠实对应原文结构与术语，数字、单位、限定词不增删，避免口语化和自由发挥。"
+            case .plain:
+                return "风格要求：大白话。用日常口语表达，拆开长句、少用术语；必须保留术语时用常见说法解释，但不改变原意。"
+            case .concise:
+                return "风格要求：精简并总结。先给出压缩冗余后的简洁译文，再另起一行以「总结：」开头，用一句话概括核心内容。"
+            case .natural:
+                return ""
+            }
+        }
+        switch style {
+        case .precise:
+            return "Style: precise. Stay faithful to the source structure and terminology; keep numbers, units and qualifiers exact; avoid colloquialisms and free interpretation."
+        case .plain:
+            return "Style: plain language. Use everyday wording, split long sentences and avoid jargon; explain a required term in common words without changing the meaning."
+        case .concise:
+            return "Style: concise with a summary. Give a tightened translation first, then on a new line start with \"Summary:\" and condense the core meaning into one sentence."
+        case .natural:
+            return ""
+        }
     }
 
     private static func parseContent(from data: Data) throws -> String {

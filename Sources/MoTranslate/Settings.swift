@@ -68,6 +68,26 @@ enum HotKeyPreset: String, CaseIterable, Identifiable {
     }
 }
 
+// MARK: - 翻译风格
+
+enum TranslationStyle: String, CaseIterable, Identifiable {
+    case natural
+    case precise
+    case plain
+    case concise
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .natural: return "自然"
+        case .precise: return "严谨"
+        case .plain: return "大白话"
+        case .concise: return "精简 + 总结"
+        }
+    }
+}
+
 // MARK: - 峰谷档位
 
 /// 服务商按时间段计价的档位，如 DeepSeek 的高峰/空闲定价。
@@ -180,6 +200,16 @@ final class AppSettings: ObservableObject {
         didSet { defaults.set(streamingEnabled, forKey: "streamingEnabled") }
     }
 
+    /// 翻译风格：自然、严谨、大白话、精简加总结。
+    @Published var style: TranslationStyle {
+        didSet { defaults.set(style.rawValue, forKey: "translationStyle") }
+    }
+
+    /// 识别 Markdown 结构并在提示词中要求保留语法。
+    @Published var markdownEnabled: Bool {
+        didSet { defaults.set(markdownEnabled, forKey: "markdownEnabled") }
+    }
+
     // MARK: 峰谷调度
 
     @Published var scheduleEnabled: Bool {
@@ -221,6 +251,8 @@ final class AppSettings: ObservableObject {
         fillFromClipboard = defaults.object(forKey: "fillFromClipboard") as? Bool ?? true
         chunkingEnabled = defaults.object(forKey: "chunkingEnabled") as? Bool ?? true
         streamingEnabled = defaults.object(forKey: "streamingEnabled") as? Bool ?? true
+        style = TranslationStyle(rawValue: defaults.string(forKey: "translationStyle") ?? "") ?? .natural
+        markdownEnabled = defaults.object(forKey: "markdownEnabled") as? Bool ?? true
 
         scheduleEnabled = defaults.object(forKey: "scheduleEnabled") as? Bool ?? false
         peakStart1 = defaults.object(forKey: "peakStart1") as? Int ?? 9 * 60

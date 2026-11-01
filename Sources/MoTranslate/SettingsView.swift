@@ -340,6 +340,10 @@ struct SettingsView: View {
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
 
+                Toggle("识别 Markdown 结构（保留代码块与语法，默认开启）", isOn: $settings.markdownEnabled)
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12))
+
                 Toggle("打开面板时自动读取剪贴板", isOn: $settings.fillFromClipboard)
                     .toggleStyle(.checkbox)
                     .font(.system(size: 12))
@@ -421,7 +425,7 @@ struct SettingsView: View {
         SettingsCard(title: "关于") {
             HStack(spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("墨译 1.7")
+                    Text("墨译 1.8")
                         .font(.system(size: 12, weight: .semibold))
                     Text("原生 SwiftUI · 常驻菜单栏 · 数据只经过你自己的接口")
                         .font(.system(size: 11))

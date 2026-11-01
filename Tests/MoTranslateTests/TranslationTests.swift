@@ -248,3 +248,34 @@ import Foundation
     #expect(vm.output == "第一段第二段")
     #expect(!vm.isWorking)
 }
+
+@MainActor @Test func defaultsEnableMarkdownAndNaturalStyle() {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    #expect(settings.style == .natural)
+    #expect(settings.markdownEnabled)
+    #expect(settings.chunkingEnabled)
+    #expect(settings.streamingEnabled)
+}
+
+@MainActor @Test func passesStyleAndMarkdownOptions() async throws {
+    let (settings, defaults, name) = fixture()
+    defer { defaults.removePersistentDomain(forName: name) }
+
+    settings.style = .precise
+    settings.markdownEnabled = false
+
+    final class Box: @unchecked Sendable { var value: TranslationOptions? }
+    let box = Box()
+    let vm = TranslateViewModel(settings: settings) { _, _, options, _, _ in
+        box.value = options
+        return TranslationResult(text: "ok", sourceCode: "en", targetCode: "zh-Hans")
+    }
+    vm.input = "hello"
+    vm.startTranslation()
+    try await Task.sleep(for: .milliseconds(60))
+
+    #expect(box.value?.style == .precise)
+    #expect(box.value?.markdown == false)
+}

@@ -92,7 +92,9 @@ final class TranslateViewModel: ObservableObject {
         let config = settings.config
         let options = TranslationOptions(
             chunking: settings.chunkingEnabled,
-            streaming: settings.streamingEnabled
+            streaming: settings.streamingEnabled,
+            markdown: settings.markdownEnabled,
+            style: settings.style
         )
         activeModelLabel = config.model
         currentTask = Task { [weak self] in

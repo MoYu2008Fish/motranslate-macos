@@ -64,6 +64,8 @@ struct TranslateView: View {
         .onChange(of: settings.targetMode) { _, _ in vm.targetChanged() }
         .onChange(of: settings.chunkingEnabled) { _, _ in vm.targetChanged() }
         .onChange(of: settings.streamingEnabled) { _, _ in vm.targetChanged() }
+        .onChange(of: settings.style) { _, _ in vm.targetChanged() }
+        .onChange(of: settings.markdownEnabled) { _, _ in vm.targetChanged() }
     }
 
     private var header: some View {
@@ -96,6 +98,13 @@ struct TranslateView: View {
                 ForEach(TargetMode.allCases) { mode in Text(mode == .auto ? "智能互译" : mode.shortTitle).tag(mode) }
             }
             .labelsHidden().pickerStyle(.menu).fixedSize()
+            Picker("翻译风格", selection: $settings.style) {
+                ForEach(TranslationStyle.allCases) { style in
+                    Text(style.title).tag(style)
+                }
+            }
+            .labelsHidden().pickerStyle(.menu).fixedSize()
+            .help("翻译风格：自然、严谨、大白话、精简加总结")
             Spacer()
             modelMenu
             if settings.isManualModel {
