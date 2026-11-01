@@ -226,7 +226,10 @@ struct TranslateView: View {
                                 Button("配置翻译接口…", action: onOpenSettings).buttonStyle(.bordered)
                             } else { Button("重试") { vm.startTranslation() }.buttonStyle(.bordered) }
                         } else if vm.hasOutput {
-                            Text(vm.output).font(.system(size: 16)).lineSpacing(6).textSelection(.enabled)
+                            MarkdownText(text: vm.output)
+                                .font(.system(size: 16))
+                                .lineSpacing(6)
+                                .textSelection(.enabled)
                         } else {
                             HStack(alignment: .top, spacing: 12) {
                                 Image(systemName: "text.bubble").font(.system(size: 28, weight: .ultraLight))
@@ -330,9 +333,14 @@ struct PopupView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     if let error = vm.errorText {
                         Text(error).foregroundStyle(.orange).font(.system(size: 13)).textSelection(.enabled)
+                    } else if vm.output.isEmpty {
+                        Text("正在斟酌字句…")
+                            .font(.system(size: 15)).lineSpacing(5)
                     } else {
-                        Text(vm.output.isEmpty ? "正在斟酌字句…" : vm.output)
-                            .font(.system(size: 15)).lineSpacing(5).textSelection(.enabled)
+                        MarkdownText(text: vm.output)
+                            .font(.system(size: 15))
+                            .lineSpacing(5)
+                            .textSelection(.enabled)
                     }
                     if !vm.input.isEmpty {
                         Divider()

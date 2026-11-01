@@ -279,3 +279,28 @@ import Foundation
     #expect(box.value?.style == .precise)
     #expect(box.value?.markdown == false)
 }
+
+@Test func parsesMarkdownBlocks() {
+    let text = "# 标题\n\n- 项目一\n- 项目二\n\n```swift\nlet a = 1\n```\n\n正文段落"
+    let blocks = MarkdownBlockParser.parse(text)
+
+    #expect(blocks == [
+        .heading(level: 1, text: "标题"),
+        .bullet(text: "项目一", orderedIndex: nil),
+        .bullet(text: "项目二", orderedIndex: nil),
+        .code("let a = 1"),
+        .paragraph("正文段落")
+    ])
+}
+
+@Test func rendersBoldInlineMarkdown() {
+    // 中文标点紧贴 ** 时 Foundation 的解析器会漏判，需由自定义解析兜住。
+    for sample in ["这是**重点**内容", "**重要：**务必检查第一层。"] {
+        let attributed = MarkdownBlockParser.inline(sample)
+        let hasBold = attributed.runs.contains {
+            $0.inlinePresentationIntent?.contains(.stronglyEmphasized) == true
+        }
+        #expect(hasBold)
+        #expect(!String(attributed.characters).contains("**"))
+    }
+}
